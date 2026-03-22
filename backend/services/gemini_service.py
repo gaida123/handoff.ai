@@ -559,6 +559,26 @@ async def analyze_screen_for_step(
         }
 
 
+# ── Audio transcription ───────────────────────────────────────────────────────
+
+async def transcribe_audio(audio_bytes: bytes, mime_type: str = "audio/webm") -> str:
+    """Transcribe audio bytes using Gemini multimodal (works with webm/ogg/mp4/wav)."""
+    audio_part = types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
+    response = await _client.aio.models.generate_content(
+        model=_FAST_MODEL,
+        contents=[
+            "Transcribe this audio exactly as spoken. Return only the transcribed words — no punctuation explanation, no extra text.",
+            audio_part,
+        ],
+        config=types.GenerateContentConfig(
+            temperature=0.0,
+            max_output_tokens=300,
+            thinking_config=_THINKING_OFF,
+        ),
+    )
+    return _extract_text(response).strip()
+
+
 # ── Step chat ─────────────────────────────────────────────────────────────────
 
 _CHAT_PROMPT = """\

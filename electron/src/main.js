@@ -1,6 +1,6 @@
 const {
   app, BrowserWindow, ipcMain, screen,
-  globalShortcut, desktopCapturer,
+  globalShortcut, desktopCapturer, session,
 } = require('electron')
 const path = require('path')
 const https = require('https')
@@ -154,6 +154,16 @@ function hideGhostCursor() {
 
 // ── App ready ─────────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
+  // Allow microphone access for audio recording (used for voice input)
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'media' || permission === 'microphone') return callback(true)
+    callback(false)
+  })
+  session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+    if (permission === 'media' || permission === 'microphone') return true
+    return false
+  })
+
   createWindow()
 
   // ── IPC: collapse / expand ────────────────────────────────────────────────

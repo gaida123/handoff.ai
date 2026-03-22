@@ -25,7 +25,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
 import local_db
-from services.gemini_service import generate_steps_from_description, generate_steps_from_file, chat_with_step
+from services.gemini_service import generate_steps_from_description, generate_steps_from_file, chat_with_step, transcribe_audio
 
 router  = APIRouter(prefix="/local", tags=["Local"])
 logger  = logging.getLogger(__name__)
@@ -241,6 +241,18 @@ async def finish_session(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     await asyncio.to_thread(local_db.finish_session, session_id)
     return {"finished": True}
+
+
+@router.post("/transcribe")
+async def transcribe_audio_endpoint(file: UploadFile = File(...)):
+    """Transcribe audio recorded in the browser using Gemini multimodal."""
+    raw = await file.read()
+    mime = file.content_type or "audio/webm"
+    try:
+        text = await transcribe_audio(raw, mime)
+        return {"text": text}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {exc}")
 
 
 @router.post("/chat")

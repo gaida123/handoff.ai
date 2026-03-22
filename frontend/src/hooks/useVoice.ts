@@ -166,62 +166,82 @@ function humaniseText(text: string): string {
 }
 
 
+const TRANSCRIBE_API = 'http://localhost:8080/local/transcribe'
+
 export function useVoice({ onTranscript, lang = 'en-US' }: UseVoiceOptions) {
   const [state, setState]           = useState<VoiceState>('idle')
   const [transcript, setTranscript] = useState('')
-  const recognitionRef              = useRef<SpeechRecognition | null>(null)
   const synthRef                    = useRef<SpeechSynthesis | null>(null)
   const voiceRef                    = useRef<SpeechSynthesisVoice | null>(null)
   const audioRef                    = useRef<HTMLAudioElement | null>(null)
+  const mediaRecorderRef            = useRef<MediaRecorder | null>(null)
+  const chunksRef                   = useRef<Blob[]>([])
+  // Always-current callback ref — never stale inside async handlers
+  const onTranscriptRef             = useRef(onTranscript)
+  useEffect(() => { onTranscriptRef.current = onTranscript }, [onTranscript])
 
   useEffect(() => {
     synthRef.current = window.speechSynthesis
-
-    // Voices may load asynchronously — pick the best once they're ready
     const loadVoice = () => { voiceRef.current = pickBestVoice() }
     loadVoice()
     window.speechSynthesis.addEventListener('voiceschanged', loadVoice)
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', loadVoice)
+  }, [])
 
-    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition
-    if (!SR) return
+  const startListening = useCallback(async () => {
+    // Stop any in-progress speech first
+    audioRef.current?.pause()
+    audioRef.current = null
+    synthRef.current?.cancel()
 
-    const rec = new SR()
-    rec.continuous      = false
-    rec.interimResults  = true
-    rec.lang            = lang
-    rec.maxAlternatives = 1
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
-    rec.onresult = (ev) => {
-      let interim = ''
-      let final   = ''
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        const t = ev.results[i][0].transcript
-        ev.results[i].isFinal ? (final += t) : (interim += t)
+      // Pick a supported mime type
+      const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg', ''].find(
+        m => !m || MediaRecorder.isTypeSupported(m)
+      ) ?? ''
+
+      const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined)
+      chunksRef.current = []
+      mediaRecorderRef.current = recorder
+
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        setState('processing')
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
+        try {
+          const form = new FormData()
+          form.append('file', blob, 'audio.webm')
+          const res  = await fetch(TRANSCRIBE_API, { method: 'POST', body: form })
+          const data = await res.json()
+          const text = (data.text ?? '').trim()
+          if (text) {
+            setTranscript(text)
+            onTranscriptRef.current(text, true)
+          }
+        } catch (err) {
+          console.warn('[mic] transcription failed:', err)
+        } finally {
+          setState('idle')
+        }
       }
-      const text = final || interim
-      setTranscript(text)
-      onTranscript(text, Boolean(final))
+
+      recorder.start()
+      setState('listening')
+      setTranscript('')
+    } catch (err) {
+      console.warn('[mic] getUserMedia failed:', err)
+      setState('idle')
     }
-
-    rec.onstart  = () => setState('listening')
-    rec.onend    = () => setState('idle')
-    rec.onerror  = () => setState('idle')
-
-    recognitionRef.current = rec
-    return () => {
-      rec.abort()
-      window.speechSynthesis.removeEventListener('voiceschanged', loadVoice)
-    }
-  }, [lang]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const startListening = useCallback(() => {
-    if (state !== 'idle') return
-    setTranscript('')
-    recognitionRef.current?.start()
-  }, [state])
+  }, [])
 
   const stopListening = useCallback(() => {
-    recognitionRef.current?.stop()
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop()
+    }
   }, [])
 
   const speak = useCallback((text: string, onEnd?: () => void) => {
@@ -265,8 +285,8 @@ export function useVoice({ onTranscript, lang = 'en-US' }: UseVoiceOptions) {
   }, [])
 
   const isSupported = Boolean(
-    (window.SpeechRecognition ?? window.webkitSpeechRecognition) &&
-    window.speechSynthesis,
+    navigator.mediaDevices?.getUserMedia &&
+    window.MediaRecorder,
   )
 
   return { state, transcript, startListening, stopListening, speak, cancelSpeech, isSupported }

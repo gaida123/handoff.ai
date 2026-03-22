@@ -151,7 +151,9 @@ export default function OverlayPage() {
   const [chatInput,   setChatInput]   = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([])
-  const chatEndRef = useRef<HTMLDivElement>(null)
+  const chatEndRef   = useRef<HTMLDivElement>(null)
+  const chatOpenRef  = useRef(false)   // stable ref so onTranscript can read it
+  const sendChatRef  = useRef<(msg?: string) => void>(() => {})
 
   // Backend session
   const session = useSession()
@@ -237,10 +239,18 @@ export default function OverlayPage() {
     return () => ro.disconnect()
   }, []) // runs once; ResizeObserver handles all subsequent changes
 
+  // Keep chatOpenRef in sync
+  useEffect(() => { chatOpenRef.current = chatOpen }, [chatOpen])
+
   // ── Voice ────────────────────────────────────────────────────────────────
   const { state: voiceState, startListening, stopListening, speak } = useVoice({
     onTranscript: (text, isFinal) => {
       if (!isFinal || !text.trim()) return
+      // When chat panel is open, voice goes to the AI assistant
+      if (chatOpenRef.current) {
+        sendChatRef.current(text.trim())
+        return
+      }
       const lower = text.toLowerCase()
       if (demoMode) {
         if (lower.includes('next') || lower.includes('done')) advanceDemoStep()
@@ -419,8 +429,8 @@ export default function OverlayPage() {
     setChatInput('')
   }, [demoStep])
 
-  const sendChat = async () => {
-    const msg = chatInput.trim()
+  const sendChat = useCallback(async (voiceMsg?: string) => {
+    const msg = (voiceMsg ?? chatInput).trim()
     if (!msg || chatLoading) return
     setChatInput('')
     setChatMessages(prev => [...prev, { role: 'user', text: msg }])
@@ -449,7 +459,10 @@ export default function OverlayPage() {
     } finally {
       setChatLoading(false)
     }
-  }
+  }, [chatInput, chatLoading, activeSteps, demoStep]) // eslint-disable-line
+
+  // Keep sendChatRef current so onTranscript can call it without stale closure
+  useEffect(() => { sendChatRef.current = sendChat }, [sendChat])
 
   // ── Dragging (web mode only) ─────────────────────────────────────────────
   const posRef = useRef({ startX: 0, startY: 0 })
@@ -548,11 +561,13 @@ export default function OverlayPage() {
             {(demoMode || backendStarted) && !isComplete && (
               <button
                 onClick={voiceState === 'listening' ? stopListening : startListening}
-                disabled={voiceState === 'processing' || voiceState === 'speaking'}
+                disabled={voiceState === 'processing'}
                 className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all
                   ${voiceState === 'listening'
                     ? 'bg-white/15 text-white'
-                    : 'text-white/25 hover:text-white/60 hover:bg-white/5'
+                    : voiceState === 'speaking'
+                      ? 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                      : 'text-white/25 hover:text-white/60 hover:bg-white/5'
                   }`}
               >
                 {voiceState === 'processing' ? <Loader2 className="w-3 h-3 animate-spin" />
@@ -792,20 +807,44 @@ export default function OverlayPage() {
 
                         {/* Input row */}
                         <div className="flex items-center gap-2 px-3 py-2">
-                          <input
-                            value={chatInput}
-                            onChange={e => setChatInput(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendChat()}
-                            placeholder={chatMessages.length === 0
-                              ? 'Ask a question or say "I already did this"…'
-                              : 'Reply…'}
-                            disabled={chatLoading}
-                            className="flex-1 bg-transparent text-[12px] text-white/70 placeholder-white/20
-                                       focus:outline-none disabled:opacity-40"
-                          />
+                          {voiceState === 'listening' ? (
+                            <p className="flex-1 text-[12px] text-white/40 italic animate-pulse">
+                              Listening… speak now
+                            </p>
+                          ) : (
+                            <input
+                              value={chatInput}
+                              onChange={e => setChatInput(e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendChat()}
+                              placeholder={chatMessages.length === 0
+                                ? 'Type or tap 🎤 to speak…'
+                                : 'Reply…'}
+                              disabled={chatLoading}
+                              autoFocus
+                              className="flex-1 bg-transparent text-[12px] text-white/70 placeholder-white/20
+                                         focus:outline-none disabled:opacity-40"
+                            />
+                          )}
+                          {/* Mic button */}
                           <button
-                            onClick={sendChat}
-                            disabled={!chatInput.trim() || chatLoading}
+                            onClick={voiceState === 'listening' ? stopListening : startListening}
+                            disabled={voiceState === 'processing' || chatLoading}
+                            className={`w-6 h-6 flex items-center justify-center rounded-lg transition-all
+                              ${voiceState === 'listening'
+                                ? 'text-white bg-white/15'
+                                : 'text-white/25 hover:text-white/60 hover:bg-white/8'
+                              } disabled:opacity-20 disabled:pointer-events-none`}
+                          >
+                            {voiceState === 'processing'
+                              ? <Loader2 className="w-3 h-3 animate-spin" />
+                              : voiceState === 'listening'
+                                ? <MicOff className="w-3 h-3" />
+                                : <Mic className="w-3 h-3" />}
+                          </button>
+                          {/* Send button */}
+                          <button
+                            onClick={() => sendChat()}
+                            disabled={!chatInput.trim() || chatLoading || voiceState === 'listening'}
                             className="w-6 h-6 flex items-center justify-center rounded-lg
                                        text-white/30 hover:text-white/70 hover:bg-white/8
                                        disabled:opacity-20 disabled:pointer-events-none transition-all"
