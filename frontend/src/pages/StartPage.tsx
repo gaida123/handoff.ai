@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Loader2, ArrowRight, BookOpen, AlertCircle } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 
-const API = 'http://localhost:8080'
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
 interface SopStep { title: string; instruction: string; expected: string }
 interface Sop {

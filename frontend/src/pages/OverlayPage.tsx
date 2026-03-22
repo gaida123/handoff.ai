@@ -8,7 +8,7 @@ import {
 import { useSession } from '../hooks/useSession'
 import { useVoice } from '../hooks/useVoice'
 
-const LOCAL_API = 'http://localhost:8080'
+const LOCAL_API = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface IdleHint {
@@ -85,7 +85,7 @@ async function analyzeScreen(
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 6000)
   try {
-    const res = await fetch('http://localhost:8080/vision/analyze-screen', {
+    const res = await fetch(`${LOCAL_API}/vision/analyze-screen`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ screenshot_base64: screenshotBase64, step_index: stepIndex, instruction_text: instructionText, expected_screen: expectedScreen }),

@@ -6,7 +6,7 @@ import {
   CheckCircle2, Clock, AlertCircle, X, Upload, FileText, Zap,
 } from 'lucide-react'
 
-const API = 'http://localhost:8080'
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
 interface SopStep { title: string; instruction: string; expected: string }
 interface Sop {

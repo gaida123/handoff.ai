@@ -166,7 +166,7 @@ function humaniseText(text: string): string {
 }
 
 
-const TRANSCRIBE_API = 'http://localhost:8080/local/transcribe'
+const TRANSCRIBE_API = `${import.meta.env.VITE_API_URL ?? 'http://localhost:8080'}/local/transcribe`
 
 export function useVoice({ onTranscript, lang = 'en-US' }: UseVoiceOptions) {
   const [state, setState]           = useState<VoiceState>('idle')
