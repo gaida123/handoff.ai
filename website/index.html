@@ -3,805 +3,1056 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HandOff AI — Onboarding that actually works</title>
+  <title>HandOff AI — AI-guided onboarding for modern teams</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --white:   #ffffff;
-      --gray-1:  #f5f5f5;
-      --gray-2:  #a0a0a0;
-      --gray-3:  #555555;
-      --bg:      #0a0a0a;
-      --surface: #111111;
-      --border:  rgba(255,255,255,0.07);
-      --accent:  #ffffff;
-    }
-
     html { scroll-behavior: smooth; }
 
     body {
       font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--white);
+      background: #080808;
+      color: #fff;
       -webkit-font-smoothing: antialiased;
       overflow-x: hidden;
     }
 
-    /* ── Nav ──────────────────────────────────────────────────────────────── */
+    /* ── Nav ─────────────────────────────────────────────────────────── */
     nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      height: 58px;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 40px; height: 60px;
-      background: rgba(10,10,10,0.85);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
+      padding: 0 48px;
+      background: rgba(8,8,8,0.8);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
     }
-    .nav-logo {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 16px; font-weight: 700; letter-spacing: -0.3px;
+    .logo {
+      display: flex; align-items: center; gap: 9px;
+      font-size: 15px; font-weight: 700; letter-spacing: -.3px; color: #fff;
+      text-decoration: none;
     }
-    .nav-dot { width: 8px; height: 8px; border-radius: 50%; background: white; }
-    .nav-links { display: flex; align-items: center; gap: 32px; }
-    .nav-links a {
-      font-size: 14px; color: rgba(255,255,255,0.5); text-decoration: none;
-      transition: color .2s;
+    .logo-mark {
+      width: 24px; height: 24px; border-radius: 6px;
+      background: #fff; display: flex; align-items: center; justify-content: center;
     }
-    .nav-links a:hover { color: white; }
-    .nav-cta {
-      display: flex; align-items: center; gap: 8px;
+    .logo-mark svg { color: #000; }
+    .nav-center { display: flex; align-items: center; gap: 28px; }
+    .nav-center a {
+      font-size: 14px; color: rgba(255,255,255,0.45); text-decoration: none;
+      transition: color .15s; font-weight: 400;
     }
-    .btn-outline {
-      padding: 7px 16px; border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.15);
-      font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.7);
+    .nav-center a:hover { color: rgba(255,255,255,0.85); }
+    .nav-right { display: flex; align-items: center; gap: 8px; }
+    .btn-ghost {
+      padding: 7px 15px; border-radius: 7px;
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55);
       background: transparent; cursor: pointer; text-decoration: none;
-      transition: all .2s;
+      transition: all .15s;
     }
-    .btn-outline:hover { border-color: rgba(255,255,255,0.4); color: white; }
-    .btn-primary {
-      padding: 7px 16px; border-radius: 8px;
-      background: white; color: black;
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.25); color: #fff; }
+    .btn-white {
+      padding: 7px 15px; border-radius: 7px;
+      background: #fff; color: #000;
       font-size: 13px; font-weight: 600;
       border: none; cursor: pointer; text-decoration: none;
-      transition: opacity .2s;
+      transition: opacity .15s;
     }
-    .btn-primary:hover { opacity: 0.88; }
+    .btn-white:hover { opacity: 0.85; }
 
-    /* ── Hero ─────────────────────────────────────────────────────────────── */
+    /* ── Hero ────────────────────────────────────────────────────────── */
     .hero {
-      min-height: 100vh;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding-top: 140px;
+      display: flex; flex-direction: column; align-items: center;
       text-align: center;
-      padding: 120px 24px 80px;
       position: relative; overflow: hidden;
     }
 
-    /* Radial glow behind hero */
-    .hero::before {
-      content: '';
-      position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
-      width: 900px; height: 600px;
-      background: radial-gradient(ellipse at center, rgba(255,255,255,0.04) 0%, transparent 70%);
-      pointer-events: none;
+    /* top gradient glow */
+    .hero-glow {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 1200px; height: 500px; pointer-events: none;
+      background: radial-gradient(ellipse 60% 60% at 50% 0%, rgba(255,255,255,0.055) 0%, transparent 100%);
     }
 
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 5px 12px; border-radius: 100px;
-      border: 1px solid rgba(255,255,255,0.12);
+    .hero-label {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 13px; border-radius: 100px;
+      border: 1px solid rgba(255,255,255,0.1);
       background: rgba(255,255,255,0.04);
-      font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.5);
-      margin-bottom: 28px;
-      animation: fadeUp .6s ease both;
+      font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.45);
+      margin-bottom: 30px; letter-spacing: .1px;
+      animation: up .5s ease both;
     }
-    .hero-badge-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: #4ade80; box-shadow: 0 0 6px #4ade80;
-      animation: pulse 2s infinite;
+    .live-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: #22c55e;
+      box-shadow: 0 0 0 2px rgba(34,197,94,.25);
+      animation: livepulse 2s ease infinite;
     }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    @keyframes livepulse { 0%,100%{box-shadow:0 0 0 2px rgba(34,197,94,.25)} 50%{box-shadow:0 0 0 5px rgba(34,197,94,.0)} }
 
     h1 {
-      font-size: clamp(48px, 7vw, 88px);
-      font-weight: 800;
-      letter-spacing: -2.5px;
-      line-height: 1.02;
-      max-width: 900px;
-      animation: fadeUp .7s .1s ease both;
+      font-size: clamp(44px, 6.5vw, 84px);
+      font-weight: 800; letter-spacing: -3px; line-height: 1.02;
+      max-width: 820px;
+      animation: up .55s .06s ease both;
     }
-    h1 em { font-style: normal; color: rgba(255,255,255,0.35); }
+    h1 span { color: rgba(255,255,255,0.28); }
 
     .hero-sub {
-      margin-top: 24px;
-      font-size: 18px; color: rgba(255,255,255,0.45); font-weight: 400;
-      max-width: 520px; line-height: 1.6;
-      animation: fadeUp .7s .2s ease both;
+      margin-top: 22px;
+      font-size: 17px; color: rgba(255,255,255,0.38); line-height: 1.65;
+      max-width: 460px; font-weight: 400;
+      animation: up .55s .12s ease both;
     }
 
-    .hero-actions {
-      display: flex; align-items: center; gap: 12px;
-      margin-top: 36px;
-      animation: fadeUp .7s .3s ease both;
+    .hero-btns {
+      display: flex; gap: 10px; margin-top: 32px;
+      animation: up .55s .18s ease both;
     }
-    .btn-hero {
-      padding: 12px 28px; border-radius: 10px;
-      background: white; color: black;
-      font-size: 15px; font-weight: 600;
+    .btn-lg {
+      padding: 11px 26px; border-radius: 9px;
+      background: #fff; color: #000;
+      font-size: 14px; font-weight: 600;
       text-decoration: none; border: none; cursor: pointer;
-      transition: opacity .2s;
+      transition: opacity .15s;
     }
-    .btn-hero:hover { opacity: 0.88; }
-    .btn-hero-ghost {
-      padding: 12px 28px; border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.15);
-      background: transparent; color: rgba(255,255,255,0.65);
-      font-size: 15px; font-weight: 500;
-      text-decoration: none; cursor: pointer;
-      transition: all .2s;
+    .btn-lg:hover { opacity: 0.85; }
+    .btn-lg-ghost {
+      padding: 11px 26px; border-radius: 9px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: transparent; color: rgba(255,255,255,0.55);
+      font-size: 14px; font-weight: 500;
+      text-decoration: none; cursor: pointer; transition: all .15s;
     }
-    .btn-hero-ghost:hover { border-color: rgba(255,255,255,0.35); color: white; }
+    .btn-lg-ghost:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
 
-    /* Widget mockup */
-    .widget-mockup {
-      margin-top: 72px;
-      position: relative;
-      animation: fadeUp .8s .4s ease both;
-    }
-    .widget-frame {
-      width: 660px; max-width: 100%;
-      background: rgba(17,17,17,0.98);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 18px;
-      box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04) inset;
-      overflow: hidden;
-    }
-    .widget-bar {
-      display: flex; align-items: center; height: 52px; padding: 0 16px; gap: 12px;
-    }
-    .widget-logo { display: flex; align-items: center; gap: 8px; }
-    .widget-logo-dot { width: 7px; height: 7px; border-radius: 50%; background: white; }
-    .widget-logo-text { font-size: 13px; font-weight: 600; }
-    .widget-divider { width: 1px; height: 18px; background: rgba(255,255,255,0.08); }
-    .widget-step-info { flex: 1; display: flex; align-items: center; gap: 8px; }
-    .widget-step-num { font-size: 12px; color: rgba(255,255,255,0.3); font-variant-numeric: tabular-nums; }
-    .widget-step-title { font-size: 13px; color: rgba(255,255,255,0.75); }
-    .widget-controls { display: flex; align-items: center; gap: 6px; }
-    .widget-btn {
-      height: 28px; padding: 0 12px; border-radius: 8px;
-      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.07);
-      font-size: 12px; color: rgba(255,255,255,0.65); display: flex; align-items: center; gap: 4px;
-    }
-    .widget-icon-btn {
-      width: 28px; height: 28px; border-radius: 8px;
-      background: transparent; border: none;
-      display: flex; align-items: center; justify-content: center;
-      color: rgba(255,255,255,0.25);
-    }
-    .widget-body {
-      border-top: 1px solid rgba(255,255,255,0.06);
-      padding: 14px 16px; space-y: 12px;
-    }
-    .widget-instruction {
-      font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.55;
-      margin-bottom: 12px;
-    }
-    .widget-progress { display: flex; gap: 3px; margin-bottom: 12px; }
-    .widget-progress-bar {
-      height: 2px; flex: 1; border-radius: 9999px; background: rgba(255,255,255,0.08);
-    }
-    .widget-progress-bar.done { background: rgba(255,255,255,0.65); }
-    .widget-progress-bar.active { background: rgba(255,255,255,0.35); }
-    .widget-hint {
-      display: flex; align-items: flex-start; gap: 8px;
-      padding: 10px 12px; border-radius: 10px;
-      background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.12);
-    }
-    .widget-hint-icon { width: 14px; height: 14px; color: #fbbf24; flex-shrink: 0; margin-top: 1px; }
-    .widget-hint-text { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.5; }
-
-    /* Typing animation in widget */
-    .typing-cursor {
-      display: inline-block; width: 2px; height: 13px;
-      background: rgba(255,255,255,0.4); margin-left: 2px;
-      animation: blink .9s step-end infinite;
-      vertical-align: middle;
-    }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
+    /* Product screenshot area */
+    .hero-product {
+      margin-top: 64px;
+      position: relative; width: 100%; max-width: 1000px;
+      animation: up .6s .24s ease both;
     }
 
-    /* ── Section shared ───────────────────────────────────────────────────── */
-    section { padding: 100px 24px; max-width: 1100px; margin: 0 auto; }
-    .section-label {
-      font-size: 12px; font-weight: 600; letter-spacing: 1.2px;
-      text-transform: uppercase; color: rgba(255,255,255,0.3);
-      margin-bottom: 16px;
-    }
-    h2 {
-      font-size: clamp(32px, 4vw, 52px);
-      font-weight: 800; letter-spacing: -1.5px; line-height: 1.08;
-    }
-    h2 em { font-style: normal; color: rgba(255,255,255,0.3); }
-    .section-sub {
-      margin-top: 16px; font-size: 17px;
-      color: rgba(255,255,255,0.4); max-width: 480px; line-height: 1.6;
-    }
-
-    /* ── How it works ─────────────────────────────────────────────────────── */
-    #how { border-top: 1px solid var(--border); }
-    .steps-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
-      background: var(--border);
-      border: 1px solid var(--border); border-radius: 16px;
-      overflow: hidden; margin-top: 56px;
-    }
-    .step-card {
-      background: var(--bg);
-      padding: 36px 32px;
-      position: relative;
-    }
-    .step-num {
-      font-size: 11px; font-weight: 700; letter-spacing: 1px;
-      color: rgba(255,255,255,0.2); text-transform: uppercase;
-      margin-bottom: 20px;
-    }
-    .step-icon {
-      width: 40px; height: 40px; border-radius: 10px;
-      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px; margin-bottom: 20px;
-    }
-    .step-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.3px; }
-    .step-desc { font-size: 14px; color: rgba(255,255,255,0.4); line-height: 1.6; }
-
-    /* ── Features ─────────────────────────────────────────────────────────── */
-    #features { border-top: 1px solid var(--border); }
-    .features-grid {
-      display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
-      margin-top: 56px;
-    }
-    .feature-card {
-      background: var(--surface);
-      border: 1px solid var(--border); border-radius: 16px;
-      padding: 32px; overflow: hidden; position: relative;
-      transition: border-color .25s;
-    }
-    .feature-card:hover { border-color: rgba(255,255,255,0.14); }
-    .feature-card.large { grid-column: span 2; }
-    .feature-tag {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 4px 10px; border-radius: 6px;
-      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-      font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.35);
-      letter-spacing: .5px; text-transform: uppercase; margin-bottom: 20px;
-    }
-    .feature-title { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 10px; }
-    .feature-desc { font-size: 14px; color: rgba(255,255,255,0.4); line-height: 1.65; max-width: 380px; }
-
-    /* Feature visual mockups */
-    .feature-visual {
-      margin-top: 28px; border-radius: 10px; overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.06);
-      background: rgba(255,255,255,0.02);
-    }
-    .chat-bubble {
-      padding: 8px 12px; border-radius: 10px;
-      font-size: 12px; line-height: 1.5;
-      margin: 6px 0;
-    }
-    .chat-bubble.user {
-      background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.75);
-      margin-left: auto; max-width: 75%;
-    }
-    .chat-bubble.ai {
-      background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.5);
-      margin-right: auto; max-width: 80%;
-    }
-    .chat-area { padding: 16px; }
-
-    .voice-wave {
-      display: flex; align-items: center; gap: 3px;
-      height: 32px; padding: 0 12px;
-    }
-    .voice-bar {
-      width: 3px; border-radius: 2px; background: rgba(255,255,255,0.5);
-      animation: wave 1.2s ease-in-out infinite;
-    }
-    .voice-bar:nth-child(2) { animation-delay: .1s; }
-    .voice-bar:nth-child(3) { animation-delay: .2s; }
-    .voice-bar:nth-child(4) { animation-delay: .3s; }
-    .voice-bar:nth-child(5) { animation-delay: .15s; }
-    .voice-bar:nth-child(6) { animation-delay: .25s; }
-    .voice-bar:nth-child(7) { animation-delay: .05s; }
-    @keyframes wave {
-      0%,100% { height: 6px; opacity:.3 }
-      50%      { height: 22px; opacity:.9 }
-    }
-
-    /* Ghost cursor mockup */
-    .ghost-cursor {
-      width: 28px; height: 28px; border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.6);
-      background: rgba(255,255,255,0.1);
-      position: absolute;
-      animation: floatCursor 3s ease-in-out infinite;
-    }
-    .ghost-ring {
-      width: 28px; height: 28px; border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.3);
-      position: absolute;
-      animation: expandRing 1.5s ease-out infinite;
-    }
-    @keyframes floatCursor {
-      0%,100% { transform: translate(80px, 60px); }
-      50%      { transform: translate(180px, 100px); }
-    }
-    @keyframes expandRing {
-      0%   { transform: translate(80px, 60px) scale(1); opacity:.6; }
-      100% { transform: translate(80px, 60px) scale(3); opacity:0; }
-    }
-
-    /* Admin mockup */
-    .admin-row {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    .admin-row:last-child { border-bottom: none; }
-    .admin-avatar {
-      width: 28px; height: 28px; border-radius: 50%;
-      background: rgba(255,255,255,0.1); display: flex; align-items: center;
-      justify-content: center; font-size: 11px; font-weight: 700;
-      color: rgba(255,255,255,0.6); flex-shrink: 0;
-    }
-    .admin-name { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.75); }
-    .admin-meta { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 1px; }
-    .admin-badge {
-      margin-left: auto; padding: 3px 8px; border-radius: 5px;
-      font-size: 11px; font-weight: 600;
-    }
-    .admin-badge.done { background: rgba(74,222,128,.12); color: #4ade80; }
-    .admin-badge.prog { background: rgba(251,191,36,.1); color: #fbbf24; }
-
-    /* ── Stats ────────────────────────────────────────────────────────────── */
-    #stats {
-      border-top: 1px solid var(--border);
-      display: flex; flex-direction: column; align-items: center; text-align: center;
-    }
-    .stats-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 1px; background: var(--border);
-      border: 1px solid var(--border); border-radius: 16px;
-      overflow: hidden; width: 100%; margin-top: 56px;
-    }
-    .stat-card {
-      background: var(--bg); padding: 40px 32px; text-align: center;
-    }
-    .stat-num {
-      font-size: 52px; font-weight: 800; letter-spacing: -2px; line-height: 1;
-      margin-bottom: 8px;
-    }
-    .stat-label { font-size: 14px; color: rgba(255,255,255,0.35); font-weight: 400; }
-
-    /* ── Fetch.ai badge ───────────────────────────────────────────────────── */
-    #agents { border-top: 1px solid var(--border); }
-    .agents-card {
-      margin-top: 48px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 20px; padding: 40px; overflow: hidden; position: relative;
-    }
-    .agents-card::before {
-      content: ''; position: absolute; top: -100px; right: -100px;
-      width: 400px; height: 400px;
-      background: radial-gradient(ellipse, rgba(99,102,241,.07) 0%, transparent 70%);
+    /* gradient fade at bottom */
+    .hero-product::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 200px;
+      background: linear-gradient(to top, #080808 0%, transparent 100%);
       pointer-events: none;
     }
-    .agent-pill {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 6px 14px; border-radius: 100px;
-      border: 1px solid rgba(99,102,241,.3); background: rgba(99,102,241,.08);
-      font-size: 12px; font-weight: 600; color: #a5b4fc;
-      margin-bottom: 24px;
+
+    .product-window {
+      background: #111;
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 16px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 40px 100px rgba(0,0,0,0.9);
+      overflow: hidden;
     }
-    .agent-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: #6366f1; animation: pulse 2s infinite; }
-    .agent-desc { font-size: 15px; color: rgba(255,255,255,0.4); line-height: 1.65; max-width: 560px; }
-    .agent-list { margin-top: 32px; display: flex; flex-direction: column; gap: 12px; }
-    .agent-item {
+
+    /* Window chrome */
+    .window-chrome {
+      height: 38px; background: #161616;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; padding: 0 14px; gap: 6px;
+    }
+    .chrome-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .chrome-bar {
+      flex: 1; height: 20px; margin: 0 12px;
+      background: rgba(255,255,255,0.04); border-radius: 5px;
+      border: 1px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; padding: 0 10px;
+    }
+    .chrome-url { font-size: 11px; color: rgba(255,255,255,0.25); }
+
+    /* Simulated screen content */
+    .screen-content {
+      display: grid; grid-template-columns: 220px 1fr; height: 380px;
+    }
+    .screen-sidebar {
+      background: #0e0e0e; border-right: 1px solid rgba(255,255,255,0.05);
+      padding: 20px 14px; display: flex; flex-direction: column; gap: 4px;
+    }
+    .sidebar-item {
+      padding: 7px 10px; border-radius: 7px;
+      font-size: 12px; color: rgba(255,255,255,0.35);
+      display: flex; align-items: center; gap: 8px; cursor: default;
+    }
+    .sidebar-item.active {
+      background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.8);
+    }
+    .sidebar-icon { width: 14px; height: 14px; flex-shrink: 0; opacity: .5; }
+    .sidebar-item.active .sidebar-icon { opacity: 1; }
+    .screen-main {
+      background: #0d0d0d; padding: 28px 32px; overflow: hidden; position: relative;
+    }
+    .screen-main-header {
+      font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.85);
+      letter-spacing: -.3px; margin-bottom: 6px;
+    }
+    .screen-main-sub {
+      font-size: 13px; color: rgba(255,255,255,0.3); margin-bottom: 24px;
+    }
+    .sop-list { display: flex; flex-direction: column; gap: 10px; }
+    .sop-card {
+      background: #161616; border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px; padding: 14px 16px;
       display: flex; align-items: center; gap: 14px;
-      padding: 14px 18px; border-radius: 12px;
+    }
+    .sop-card.highlight { border-color: rgba(255,255,255,0.16); background: #1a1a1a; }
+    .sop-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: rgba(255,255,255,0.06); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sop-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.75); }
+    .sop-meta { font-size: 11px; color: rgba(255,255,255,0.28); margin-top: 2px; }
+    .sop-badge {
+      margin-left: auto; padding: 3px 8px; border-radius: 5px;
+      font-size: 11px; font-weight: 600; flex-shrink: 0;
+    }
+    .sop-badge.active { background: rgba(34,197,94,.12); color: #4ade80; }
+    .sop-badge.draft { background: rgba(255,255,255,.06); color: rgba(255,255,255,.3); }
+
+    /* Floating widget overlay on hero */
+    .floating-widget {
+      position: absolute; top: 24px; left: 50%; transform: translateX(-50%);
+      z-index: 10;
+      background: rgba(13,13,13,0.97);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+      width: 580px; overflow: hidden;
+    }
+    .fw-bar {
+      display: flex; align-items: center; height: 46px; padding: 0 14px; gap: 10px;
+    }
+    .fw-logo { display: flex; align-items: center; gap: 7px; }
+    .fw-dot { width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+    .fw-name { font-size: 12px; font-weight: 700; }
+    .fw-sep { width: 1px; height: 16px; background: rgba(255,255,255,0.07); }
+    .fw-step { flex: 1; display: flex; align-items: center; gap: 7px; }
+    .fw-num { font-size: 11px; color: rgba(255,255,255,0.25); font-variant-numeric: tabular-nums; }
+    .fw-title { font-size: 12px; color: rgba(255,255,255,0.7); }
+    .fw-controls { display: flex; align-items: center; gap: 5px; }
+    .fw-icon {
+      width: 26px; height: 26px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,0.25); background: transparent;
+    }
+    .fw-btn {
+      height: 26px; padding: 0 10px; border-radius: 7px;
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.07);
+      font-size: 11px; color: rgba(255,255,255,0.6);
+      display: flex; align-items: center; gap: 3px;
+    }
+    .fw-body {
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .fw-instruction { font-size: 12px; color: rgba(255,255,255,0.65); line-height: 1.55; }
+    .fw-progress { display: flex; gap: 3px; }
+    .fw-pbar { height: 2px; flex: 1; border-radius: 2px; background: rgba(255,255,255,0.07); }
+    .fw-pbar.done { background: rgba(255,255,255,0.6); }
+    .fw-pbar.cur  { background: rgba(255,255,255,0.3); }
+    .fw-hint {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 9px 11px; border-radius: 8px;
+      background: rgba(250,204,21,.05); border: 1px solid rgba(250,204,21,.1);
+    }
+    .fw-hint-text { font-size: 11px; color: rgba(255,255,255,0.45); line-height: 1.5; }
+
+    @keyframes up {
+      from { opacity:0; transform:translateY(18px) }
+      to   { opacity:1; transform:none }
+    }
+
+    /* ── Shared section ──────────────────────────────────────────────── */
+    .section {
+      max-width: 1080px; margin: 0 auto; padding: 96px 40px;
+    }
+    .section-divider { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 0 40px; }
+    .eyebrow {
+      font-size: 11px; font-weight: 600; letter-spacing: 1.4px;
+      text-transform: uppercase; color: rgba(255,255,255,0.25);
+      margin-bottom: 18px;
+    }
+    h2 {
+      font-size: clamp(30px, 3.8vw, 50px);
+      font-weight: 800; letter-spacing: -1.8px; line-height: 1.06; color: #fff;
+    }
+    h2 span { color: rgba(255,255,255,0.25); }
+    .section-desc {
+      margin-top: 14px; font-size: 16px;
+      color: rgba(255,255,255,0.35); line-height: 1.65; max-width: 440px;
+    }
+
+    /* ── Feature grid (4 ways) ───────────────────────────────────────── */
+    .feature-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 16px; margin-top: 52px;
+    }
+    .fcard {
+      background: #111; border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px; overflow: hidden;
+      transition: border-color .2s;
+    }
+    .fcard:hover { border-color: rgba(255,255,255,0.13); }
+    .fcard-wide { grid-column: span 2; }
+    .fcard-body { padding: 28px 28px 20px; }
+    .fcard-icon {
+      width: 36px; height: 36px; border-radius: 9px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 18px;
+    }
+    .fcard-icon svg { width: 16px; height: 16px; color: rgba(255,255,255,0.6); }
+    .fcard-title {
+      font-size: 18px; font-weight: 700; letter-spacing: -.3px;
+      color: #fff; margin-bottom: 8px;
+    }
+    .fcard-desc { font-size: 13px; color: rgba(255,255,255,0.38); line-height: 1.65; }
+    .fcard-visual {
+      border-top: 1px solid rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.015); padding: 20px 24px;
+    }
+
+    /* Voice visual */
+    .voice-visual {
+      display: flex; align-items: center; gap: 12px; padding: 10px 0;
+    }
+    .voice-bars { display: flex; align-items: center; gap: 3px; height: 28px; }
+    .vbar {
+      width: 3px; border-radius: 2px; background: rgba(255,255,255,0.45);
+      animation: vwave 1.1s ease-in-out infinite;
+    }
+    .vbar:nth-child(1){animation-delay:.00s;height:8px}
+    .vbar:nth-child(2){animation-delay:.08s;height:14px}
+    .vbar:nth-child(3){animation-delay:.16s;height:22px}
+    .vbar:nth-child(4){animation-delay:.24s;height:18px}
+    .vbar:nth-child(5){animation-delay:.12s;height:24px}
+    .vbar:nth-child(6){animation-delay:.20s;height:14px}
+    .vbar:nth-child(7){animation-delay:.04s;height:10px}
+    .vbar:nth-child(8){animation-delay:.18s;height:20px}
+    @keyframes vwave {
+      0%,100%{transform:scaleY(.4);opacity:.3}
+      50%{transform:scaleY(1);opacity:.9}
+    }
+    .voice-label { font-size: 12px; color: rgba(255,255,255,0.35); font-style: italic; line-height: 1.5; }
+
+    /* Verification visual */
+    .verify-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 8px; margin-bottom: 8px;
+      font-size: 12px;
+    }
+    .verify-row:last-child { margin-bottom: 0; }
+    .verify-row.pass { background: rgba(34,197,94,.07); border: 1px solid rgba(34,197,94,.12); color: rgba(255,255,255,.55); }
+    .verify-row.warn { background: rgba(234,179,8,.06); border: 1px solid rgba(234,179,8,.1); color: rgba(255,255,255,.45); }
+    .verify-icon { flex-shrink: 0; }
+
+    /* Chat visual */
+    .chat-msgs { display: flex; flex-direction: column; gap: 7px; }
+    .msg {
+      padding: 8px 12px; border-radius: 10px; font-size: 12px; line-height: 1.5; max-width: 80%;
+    }
+    .msg.user { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.75); align-self: flex-end; }
+    .msg.ai { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.45); align-self: flex-start; }
+    .chat-input-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 12px; margin-top: 12px;
+      border: 1px solid rgba(255,255,255,0.07); border-radius: 9px;
+      background: rgba(255,255,255,0.03);
+    }
+    .chat-input-placeholder { font-size: 12px; color: rgba(255,255,255,0.18); flex: 1; }
+
+    /* Ghost cursor visual */
+    .ghost-scene {
+      position: relative; height: 120px; overflow: hidden;
+    }
+    .ghost-screen {
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+      border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .ghost-btn {
+      position: absolute; bottom: 24px; right: 40px;
+      padding: 8px 18px; border-radius: 7px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+      font-size: 12px; color: rgba(255,255,255,0.6);
+    }
+    .ghost-cursor-el {
+      position: absolute;
+      width: 24px; height: 24px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.12);
+      animation: ghostmove 3s ease-in-out infinite;
+    }
+    .ghost-ring-el {
+      position: absolute;
+      width: 24px; height: 24px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.35);
+      animation: ghostring 1.6s ease-out infinite;
+    }
+    @keyframes ghostmove {
+      0%,100% { top: 50px; left: 80px; }
+      60%      { top: 32px; left: 220px; }
+    }
+    @keyframes ghostring {
+      0%   { top:50px; left:80px; transform:scale(1); opacity:.6 }
+      100% { top:50px; left:80px; transform:scale(3.5); opacity:0 }
+    }
+
+    /* Admin visual */
+    .admin-table { display: flex; flex-direction: column; }
+    .admin-tr {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .admin-tr:last-child { border-bottom: none; }
+    .admin-av {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.5);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .admin-name { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.7); }
+    .admin-sub { font-size: 11px; color: rgba(255,255,255,0.25); margin-top: 1px; }
+    .status-pill {
+      margin-left: auto; padding: 2px 8px; border-radius: 4px;
+      font-size: 10px; font-weight: 600; flex-shrink: 0; letter-spacing: .2px;
+    }
+    .status-pill.done { background: rgba(34,197,94,.1); color: #4ade80; }
+    .status-pill.prog { background: rgba(234,179,8,.08); color: #fbbf24; }
+
+    /* ── Steps section ───────────────────────────────────────────────── */
+    .steps-row {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 1px; background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.06); border-radius: 16px;
+      overflow: hidden; margin-top: 52px;
+    }
+    .step {
+      background: #080808; padding: 36px 28px;
+    }
+    .step-n {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: rgba(255,255,255,0.18); margin-bottom: 20px;
+    }
+    .step-icon-wrap {
+      width: 38px; height: 38px; border-radius: 9px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 18px;
+    }
+    .step-icon-wrap svg { width: 16px; height: 16px; color: rgba(255,255,255,0.5); }
+    .step-title { font-size: 16px; font-weight: 700; letter-spacing: -.2px; margin-bottom: 8px; }
+    .step-desc { font-size: 13px; color: rgba(255,255,255,0.35); line-height: 1.65; }
+
+    /* ── Differentiator ──────────────────────────────────────────────── */
+    .diff-card {
+      background: #111; border: 1px solid rgba(255,255,255,0.07); border-radius: 20px;
+      padding: 52px; margin-top: 52px; position: relative; overflow: hidden;
+    }
+    .diff-card::after {
+      content: '';
+      position: absolute; top: -150px; right: -150px;
+      width: 500px; height: 500px;
+      background: radial-gradient(ellipse, rgba(255,255,255,0.025) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; }
+    .diff-side-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+      color: rgba(255,255,255,0.2); margin-bottom: 16px; padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .diff-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 13px;
+    }
+    .diff-row:last-child { border-bottom: none; }
+    .diff-row.bad { color: rgba(255,255,255,0.3); }
+    .diff-row.good { color: rgba(255,255,255,0.7); }
+    .diff-check { flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Stats ───────────────────────────────────────────────────────── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 1px; background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.06); border-radius: 16px;
+      overflow: hidden; margin-top: 52px;
+    }
+    .stat { background: #080808; padding: 44px 32px; text-align: center; }
+    .stat-n {
+      font-size: 56px; font-weight: 800; letter-spacing: -3px; line-height: 1;
+      margin-bottom: 10px; color: #fff;
+    }
+    .stat-l { font-size: 13px; color: rgba(255,255,255,0.3); line-height: 1.5; }
+
+    /* ── Agents ──────────────────────────────────────────────────────── */
+    .agents-wrap {
+      background: #111; border: 1px solid rgba(255,255,255,0.07); border-radius: 20px;
+      padding: 48px; margin-top: 52px; position: relative; overflow: hidden;
+    }
+    .agents-wrap::before {
+      content: '';
+      position: absolute; top: -200px; right: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(ellipse, rgba(99,102,241,0.06) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .fetch-tag {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 12px; border-radius: 100px;
+      border: 1px solid rgba(99,102,241,0.25); background: rgba(99,102,241,0.08);
+      font-size: 11px; font-weight: 600; color: #a5b4fc; margin-bottom: 20px;
+      letter-spacing: .3px;
+    }
+    .fetch-pulse { width: 6px; height: 6px; border-radius: 50%; background: #6366f1; animation: livepulse 2s infinite; }
+    .agents-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-top: 32px; }
+    .agent-card {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 18px 20px; border-radius: 12px;
       background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
     }
-    .agent-item-icon {
-      width: 34px; height: 34px; border-radius: 9px;
-      background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.2);
-      display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;
+    .agent-icon {
+      width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0;
+      background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.18);
+      display: flex; align-items: center; justify-content: center;
     }
-    .agent-item-title { font-size: 14px; font-weight: 600; color: rgba(255,255,255,.8); }
-    .agent-item-desc { font-size: 12px; color: rgba(255,255,255,.3); margin-top: 2px; }
+    .agent-icon svg { width: 16px; height: 16px; color: #818cf8; }
+    .agent-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 3px; }
+    .agent-desc { font-size: 12px; color: rgba(255,255,255,0.3); line-height: 1.55; }
 
-    /* ── CTA ──────────────────────────────────────────────────────────────── */
-    #cta {
-      border-top: 1px solid var(--border);
-      display: flex; flex-direction: column; align-items: center; text-align: center;
+    /* ── CTA ─────────────────────────────────────────────────────────── */
+    .cta-section {
+      text-align: center; padding: 120px 40px;
+      max-width: 1080px; margin: 0 auto;
+      display: flex; flex-direction: column; align-items: center;
     }
-    .cta-glow {
-      width: 500px; height: 200px;
-      background: radial-gradient(ellipse, rgba(255,255,255,0.04) 0%, transparent 70%);
-      margin-bottom: -40px;
-    }
-    .cta-actions { display: flex; align-items: center; gap: 12px; margin-top: 32px; }
+    .cta-btns { display: flex; gap: 10px; margin-top: 32px; }
+    .cta-note { margin-top: 16px; font-size: 12px; color: rgba(255,255,255,0.2); }
 
-    /* ── Footer ───────────────────────────────────────────────────────────── */
+    /* ── Footer ──────────────────────────────────────────────────────── */
     footer {
-      border-top: 1px solid var(--border);
-      padding: 40px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 32px 48px;
       display: flex; align-items: center; justify-content: space-between;
-      color: rgba(255,255,255,0.25); font-size: 13px;
+      font-size: 12px; color: rgba(255,255,255,0.2);
     }
-    footer a { color: rgba(255,255,255,0.25); text-decoration: none; }
-    footer a:hover { color: rgba(255,255,255,0.5); }
     .footer-links { display: flex; gap: 24px; }
+    .footer-links a { color: rgba(255,255,255,0.2); text-decoration: none; transition: color .15s; }
+    .footer-links a:hover { color: rgba(255,255,255,0.5); }
 
-    /* ── Responsive ───────────────────────────────────────────────────────── */
-    @media (max-width: 768px) {
-      nav { padding: 0 20px; }
-      .nav-links { display: none; }
-      .steps-grid { grid-template-columns: 1fr; }
-      .features-grid { grid-template-columns: 1fr; }
-      .feature-card.large { grid-column: span 1; }
-      .stats-grid { grid-template-columns: 1fr; }
-      footer { flex-direction: column; gap: 16px; text-align: center; }
-      .widget-frame { width: 100%; }
-    }
+    /* ── Scroll reveal ───────────────────────────────────────────────── */
+    .reveal { opacity:0; transform:translateY(20px); transition: opacity .65s ease, transform .65s ease; }
+    .reveal.in { opacity:1; transform:none; }
 
-    /* Scroll fade-in */
-    .reveal {
-      opacity: 0; transform: translateY(24px);
-      transition: opacity .7s ease, transform .7s ease;
+    /* ── Responsive ──────────────────────────────────────────────────── */
+    @media(max-width:768px){
+      nav{padding:0 20px;}
+      .nav-center{display:none;}
+      h1{letter-spacing:-2px;}
+      .hero{padding-top:110px;}
+      .section{padding:72px 24px;}
+      .section-divider{margin:0 24px;}
+      .feature-grid{grid-template-columns:1fr;}
+      .fcard-wide{grid-column:span 1;}
+      .steps-row{grid-template-columns:1fr;}
+      .diff-grid{grid-template-columns:1fr;}
+      .stats-row{grid-template-columns:1fr;}
+      .agents-grid{grid-template-columns:1fr;}
+      .diff-card{padding:32px 24px;}
+      .agents-wrap{padding:32px 24px;}
+      footer{flex-direction:column;gap:16px;text-align:center;}
+      .floating-widget{width:calc(100% - 40px);}
+      .screen-content{grid-template-columns:1fr;height:auto;}
+      .screen-sidebar{display:none;}
     }
-    .reveal.visible { opacity: 1; transform: none; }
   </style>
 </head>
 <body>
 
-<!-- ── Nav ───────────────────────────────────────────────────────────────── -->
+<!-- Nav -->
 <nav>
-  <div class="nav-logo">
-    <div class="nav-dot"></div>
+  <a class="logo" href="#">
+    <div class="logo-mark">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </div>
     HandOff AI
-  </div>
-  <div class="nav-links">
-    <a href="#how">How it works</a>
+  </a>
+  <div class="nav-center">
     <a href="#features">Features</a>
+    <a href="#how">How it works</a>
     <a href="#agents">AI Agents</a>
   </div>
-  <div class="nav-cta">
-    <a href="#how" class="btn-outline">Learn more</a>
-    <a href="#cta" class="btn-primary">Get started →</a>
+  <div class="nav-right">
+    <a href="#" class="btn-ghost">Sign in</a>
+    <a href="#cta" class="btn-white">Get started</a>
   </div>
 </nav>
 
-<!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+<!-- Hero -->
 <div class="hero">
-  <div class="hero-badge">
-    <div class="hero-badge-dot"></div>
-    Now with AI voice guidance
+  <div class="hero-glow"></div>
+
+  <div class="hero-label">
+    <div class="live-dot"></div>
+    AI-guided onboarding — now with voice
   </div>
 
-  <h1>Onboarding that <em>actually</em><br>guides your team</h1>
+  <h1>Onboarding that <span>guides,</span><br>not just instructs</h1>
 
-  <p class="hero-sub">
-    HandOff AI sits above every window as a floating widget, reads your screen, speaks each step aloud, and won't let anyone get lost.
-  </p>
+  <p class="hero-sub">A floating AI widget that reads your screen, speaks each step aloud, and makes sure your new hires never get lost.</p>
 
-  <div class="hero-actions">
-    <a href="#cta" class="btn-hero">Get started free</a>
-    <a href="#how" class="btn-hero-ghost">See how it works</a>
+  <div class="hero-btns">
+    <a href="#cta" class="btn-lg">Download for Mac</a>
+    <a href="#features" class="btn-lg-ghost">See features</a>
   </div>
 
-  <!-- Widget mockup -->
-  <div class="widget-mockup">
-    <div class="widget-frame">
-      <!-- Bar -->
-      <div class="widget-bar">
-        <div class="widget-logo">
-          <div class="widget-logo-dot"></div>
-          <span class="widget-logo-text">HandOff</span>
-        </div>
-        <div class="widget-divider"></div>
-        <div class="widget-step-info">
-          <span class="widget-step-num">2/5</span>
-          <span class="widget-step-title">Open Google Workspace</span>
-        </div>
-        <div class="widget-controls">
-          <div class="widget-icon-btn">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+  <!-- Product window -->
+  <div class="hero-product">
+    <div class="product-window">
+      <div class="window-chrome">
+        <div class="chrome-dot" style="background:#ff5f57"></div>
+        <div class="chrome-dot" style="background:#febc2e"></div>
+        <div class="chrome-dot" style="background:#28c840"></div>
+        <div class="chrome-bar"><span class="chrome-url">handoff.ai/admin</span></div>
+      </div>
+
+      <div class="screen-content">
+        <!-- Sidebar -->
+        <div class="screen-sidebar">
+          <div style="font-size:11px;color:rgba(255,255,255,0.2);font-weight:600;letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px;padding:0 4px;">Dashboard</div>
+          <div class="sidebar-item active">
+            <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            SOPs
           </div>
-          <div class="widget-icon-btn">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <div class="sidebar-item">
+            <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Sessions
           </div>
-          <div class="widget-btn">
-            Done
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          <div class="sidebar-item">
+            <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Agent Feed
+          </div>
+          <div class="sidebar-item">
+            <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            Settings
+          </div>
+        </div>
+
+        <!-- Main content -->
+        <div class="screen-main">
+          <div class="screen-main-header">Standard Operating Procedures</div>
+          <div class="screen-main-sub">3 SOPs active · 14 sessions this week</div>
+          <div class="sop-list">
+            <div class="sop-card highlight">
+              <div class="sop-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div>
+                <div class="sop-title">Google Workspace Setup</div>
+                <div class="sop-meta">5 steps · 8 min avg · Last used 2h ago</div>
+              </div>
+              <div class="sop-badge active">Active</div>
+            </div>
+            <div class="sop-card">
+              <div class="sop-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              </div>
+              <div>
+                <div class="sop-title">MacBook Setup</div>
+                <div class="sop-meta">8 steps · 22 min avg</div>
+              </div>
+              <div class="sop-badge active">Active</div>
+            </div>
+            <div class="sop-card">
+              <div class="sop-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div>
+                <div class="sop-title">Slack Onboarding</div>
+                <div class="sop-meta">4 steps · Draft</div>
+              </div>
+              <div class="sop-badge draft">Draft</div>
+            </div>
           </div>
         </div>
       </div>
-      <!-- Body -->
-      <div class="widget-body">
-        <p class="widget-instruction" id="typing-text">Go to <strong style="color:rgba(255,255,255,.85)">workspace.google.com</strong> and sign in with your company email address.<span class="typing-cursor"></span></p>
-        <!-- Progress -->
-        <div class="widget-progress">
-          <div class="widget-progress-bar done"></div>
-          <div class="widget-progress-bar active"></div>
-          <div class="widget-progress-bar"></div>
-          <div class="widget-progress-bar"></div>
-          <div class="widget-progress-bar"></div>
+
+      <!-- Floating widget -->
+      <div class="floating-widget">
+        <div class="fw-bar">
+          <div class="fw-logo">
+            <div class="fw-dot"></div>
+            <span class="fw-name">HandOff</span>
+          </div>
+          <div class="fw-sep"></div>
+          <div class="fw-step">
+            <span class="fw-num">2 / 5</span>
+            <span class="fw-title">Set up Google Workspace</span>
+          </div>
+          <div class="fw-controls">
+            <div class="fw-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/></svg>
+            </div>
+            <div class="fw-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div class="fw-btn">Done <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </div>
         </div>
-        <!-- Hint -->
-        <div class="widget-hint">
-          <svg class="widget-hint-icon" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <p class="widget-hint-text">Looks like you're still on Gmail — navigate to workspace.google.com to continue.</p>
+        <div class="fw-body">
+          <p class="fw-instruction">Go to <strong style="color:rgba(255,255,255,.8)">workspace.google.com</strong> and sign in with your company email. Click "Continue" when you see your inbox.</p>
+          <div class="fw-progress">
+            <div class="fw-pbar done"></div>
+            <div class="fw-pbar cur"></div>
+            <div class="fw-pbar"></div>
+            <div class="fw-pbar"></div>
+            <div class="fw-pbar"></div>
+          </div>
+          <div class="fw-hint">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <p class="fw-hint-text">Still on Gmail — navigate to workspace.google.com to continue this step.</p>
+          </div>
         </div>
       </div>
     </div>
-    <!-- Glow under widget -->
-    <div style="position:absolute;bottom:-60px;left:50%;transform:translateX(-50%);width:60%;height:80px;background:radial-gradient(ellipse,rgba(255,255,255,0.06) 0%,transparent 70%);pointer-events:none;"></div>
   </div>
 </div>
 
-<!-- ── How it works ───────────────────────────────────────────────────────── -->
-<section id="how" class="reveal">
-  <p class="section-label">How it works</p>
-  <h2>Three steps to <em>zero confusion</em></h2>
-  <p class="section-sub">Upload your process once. Every new hire gets a personal AI guide from day one.</p>
+<!-- Features -->
+<div class="section-divider"></div>
+<div class="section reveal" id="features">
+  <p class="eyebrow">Features</p>
+  <h2>Four ways HandOff <span>guides</span><br>your new hires</h2>
 
-  <div class="steps-grid">
-    <div class="step-card">
-      <div class="step-num">Step 01</div>
-      <div class="step-icon">📄</div>
-      <div class="step-title">Upload your SOP</div>
-      <p class="step-desc">Drop in a PDF, Word doc, or plain text. HandOff AI reads it and generates step-by-step instructions automatically in seconds.</p>
-    </div>
-    <div class="step-card">
-      <div class="step-num">Step 02</div>
-      <div class="step-icon">🔗</div>
-      <div class="step-title">Share a link</div>
-      <p class="step-desc">Copy the onboarding link from your admin dashboard and send it to your new hire. One click and they're in — no login, no setup.</p>
-    </div>
-    <div class="step-card">
-      <div class="step-num">Step 03</div>
-      <div class="step-icon">🤖</div>
-      <div class="step-title">AI does the rest</div>
-      <p class="step-desc">The HandOff widget floats above the screen, reads each step aloud, watches the screen, and guides the user to the right place.</p>
-    </div>
-  </div>
-</section>
+  <div class="feature-grid">
 
-<!-- ── Features ───────────────────────────────────────────────────────────── -->
-<section id="features" class="reveal">
-  <p class="section-label">Features</p>
-  <h2>Everything a new hire <em>needs</em></h2>
-
-  <div class="features-grid">
-
-    <!-- Voice guidance -->
-    <div class="feature-card">
-      <div class="feature-tag">🎙️ Voice</div>
-      <div class="feature-title">Speaks every step aloud</div>
-      <p class="feature-desc">Natural AI voice reads each instruction as the user arrives. No reading required — just listen and do.</p>
-      <div class="feature-visual" style="padding:16px 16px 8px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-          <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/></svg>
-          </div>
-          <div class="voice-wave">
-            <div class="voice-bar" style="height:10px"></div>
-            <div class="voice-bar" style="height:18px"></div>
-            <div class="voice-bar" style="height:24px"></div>
-            <div class="voice-bar" style="height:16px"></div>
-            <div class="voice-bar" style="height:22px"></div>
-            <div class="voice-bar" style="height:12px"></div>
-            <div class="voice-bar" style="height:20px"></div>
-          </div>
+    <!-- Voice -->
+    <div class="fcard">
+      <div class="fcard-body">
+        <div class="fcard-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
         </div>
-        <p style="font-size:12px;color:rgba(255,255,255,0.3);padding-bottom:12px;font-style:italic;">"Go to workspace.google.com and sign in with your company email address."</p>
+        <div class="fcard-title">Speaks every step aloud</div>
+        <p class="fcard-desc">Natural AI voice reads each instruction as it appears. No reading required — just listen and follow along.</p>
+      </div>
+      <div class="fcard-visual">
+        <div class="voice-visual">
+          <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/></svg>
+          </div>
+          <div class="voice-bars">
+            <div class="vbar"></div><div class="vbar"></div><div class="vbar"></div>
+            <div class="vbar"></div><div class="vbar"></div><div class="vbar"></div>
+            <div class="vbar"></div><div class="vbar"></div>
+          </div>
+          <p class="voice-label">"Go to workspace.google.com and sign in with your company email."</p>
+        </div>
       </div>
     </div>
 
     <!-- Screen verification -->
-    <div class="feature-card">
-      <div class="feature-tag">👁️ Vision</div>
-      <div class="feature-title">Verifies every step</div>
-      <p class="feature-desc">Before moving on, HandOff takes a screenshot and checks the user is actually on the right screen. No skipping steps by accident.</p>
-      <div class="feature-visual" style="padding:14px;display:flex;flex-direction:column;gap:8px;">
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.15);">
-          <span style="color:#4ade80;font-size:13px;">✓</span>
-          <span style="font-size:12px;color:rgba(255,255,255,.5);">Correct screen detected — workspace.google.com</span>
+    <div class="fcard">
+      <div class="fcard-body">
+        <div class="fcard-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.12);">
-          <span style="color:#fbbf24;font-size:13px;">⚠</span>
-          <span style="font-size:12px;color:rgba(255,255,255,.4);">Still on Gmail — navigate to workspace first</span>
+        <div class="fcard-title">Verifies every step</div>
+        <p class="fcard-desc">Before advancing, HandOff takes a screenshot and checks the user is actually on the right screen — no accidental skipping.</p>
+      </div>
+      <div class="fcard-visual">
+        <div class="verify-row pass">
+          <svg class="verify-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Correct screen — workspace.google.com detected
+        </div>
+        <div class="verify-row warn">
+          <svg class="verify-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Still on Gmail — navigate to workspace first
         </div>
       </div>
     </div>
 
-    <!-- Chat assistant - large -->
-    <div class="feature-card large">
-      <div class="feature-tag">💬 Chat</div>
-      <div class="feature-title">Ask anything. Skip what you've done.</div>
-      <p class="feature-desc">A built-in AI assistant understands context. Say "I already did this" and it'll skip ahead. Ask "what does this mean?" and it explains in plain language — via text or voice.</p>
-      <div class="feature-visual" style="padding:16px;margin-top:24px;">
-        <div class="chat-area" style="padding:0;display:flex;flex-direction:column;gap:6px;">
-          <div class="chat-bubble user">"I already set up my Google account last week"</div>
-          <div class="chat-bubble ai">Got it! Since you've already completed this step, I'll move you ahead to setting up Slack. 👍</div>
-          <div class="chat-bubble user">"What's a workspace email?"</div>
-          <div class="chat-bubble ai">It's the email your company provides — usually yourname@companyname.com. Check with your IT admin if you haven't received it yet.</div>
+    <!-- Chat assistant - wide -->
+    <div class="fcard fcard-wide">
+      <div class="fcard-body">
+        <div class="fcard-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid rgba(255,255,255,0.05);margin-top:8px;">
-          <span style="font-size:12px;color:rgba(255,255,255,0.2);flex:1;">Type or tap 🎤 to speak…</span>
+        <div class="fcard-title">Ask anything. Skip what you've already done.</div>
+        <p class="fcard-desc">A built-in AI assistant understands context. Say "I already did this" and the widget moves on automatically. Ask a question and it answers — via text or voice.</p>
+      </div>
+      <div class="fcard-visual">
+        <div class="chat-msgs">
+          <div class="msg user">"I already set up my Google account last week"</div>
+          <div class="msg ai">Got it — since you've already completed this step, moving you ahead to setting up Slack now.</div>
+          <div class="msg user">"What's a workspace email?"</div>
+          <div class="msg ai">It's the email your company provides — usually yourname@companyname.com. Check with your IT admin if you haven't received one yet.</div>
+        </div>
+        <div class="chat-input-row">
+          <span class="chat-input-placeholder">Type or tap the mic to speak…</span>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/></svg>
         </div>
       </div>
     </div>
 
     <!-- Ghost cursor -->
-    <div class="feature-card" style="position:relative;overflow:hidden;min-height:260px;">
-      <div class="feature-tag">🖱️ Ghost cursor</div>
-      <div class="feature-title">Points to exactly where to click</div>
-      <p class="feature-desc">When the user is lost, an animated cursor appears and floats to the exact button they need to press.</p>
-      <div style="position:absolute;bottom:0;right:0;width:260px;height:160px;">
-        <div class="ghost-ring"></div>
-        <div class="ghost-cursor"></div>
-        <!-- Fake UI elements -->
-        <div style="position:absolute;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;opacity:.35;">
-          <div style="width:80px;height:10px;border-radius:4px;background:rgba(255,255,255,.2)"></div>
-          <div style="width:120px;height:10px;border-radius:4px;background:rgba(255,255,255,.15)"></div>
-          <div style="width:60px;height:28px;border-radius:6px;background:rgba(255,255,255,.3)"></div>
+    <div class="fcard" style="position:relative;">
+      <div class="fcard-body">
+        <div class="fcard-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-7 1-3 7z"/></svg>
+        </div>
+        <div class="fcard-title">Points to exactly where to click</div>
+        <p class="fcard-desc">When a user is lost, a ghost cursor appears and floats to the precise button they need to press.</p>
+      </div>
+      <div class="fcard-visual">
+        <div class="ghost-scene">
+          <div class="ghost-screen"></div>
+          <div style="position:absolute;bottom:24px;right:40px;">
+            <div style="padding:7px 16px;border-radius:7px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);font-size:12px;color:rgba(255,255,255,0.55);">Sign in</div>
+          </div>
+          <div style="position:absolute;top:20px;left:20px;width:90px;height:10px;border-radius:4px;background:rgba(255,255,255,0.05);"></div>
+          <div style="position:absolute;top:38px;left:20px;width:140px;height:8px;border-radius:4px;background:rgba(255,255,255,0.03);"></div>
+          <div class="ghost-ring-el"></div>
+          <div class="ghost-cursor-el"></div>
         </div>
       </div>
     </div>
 
-    <!-- Admin dashboard -->
-    <div class="feature-card">
-      <div class="feature-tag">⚙️ Admin</div>
-      <div class="feature-title">Track every hire's progress</div>
-      <p class="feature-desc">See who's completed what in real-time. AI-generated summaries for every session, automatically.</p>
-      <div class="feature-visual" style="margin-top:20px;">
-        <div class="admin-row">
-          <div class="admin-avatar">JL</div>
-          <div>
-            <div class="admin-name">Jamie Lee</div>
-            <div class="admin-meta">Google Workspace Setup · 3/5 steps</div>
-          </div>
-          <div class="admin-badge prog">In progress</div>
+    <!-- Admin -->
+    <div class="fcard">
+      <div class="fcard-body">
+        <div class="fcard-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
-        <div class="admin-row">
-          <div class="admin-avatar">MR</div>
-          <div>
-            <div class="admin-name">Marcus R.</div>
-            <div class="admin-meta">Slack Onboarding · Completed in 8 min</div>
+        <div class="fcard-title">Track every hire's progress</div>
+        <p class="fcard-desc">See who's completed what in real-time. AI-generated session summaries appear automatically after every onboarding.</p>
+      </div>
+      <div class="fcard-visual">
+        <div class="admin-table">
+          <div class="admin-tr">
+            <div class="admin-av">JL</div>
+            <div><div class="admin-name">Jamie Lee</div><div class="admin-sub">Google Workspace · step 3 of 5</div></div>
+            <div class="status-pill prog">In progress</div>
           </div>
-          <div class="admin-badge done">Done ✓</div>
-        </div>
-        <div class="admin-row">
-          <div class="admin-avatar">SP</div>
-          <div>
-            <div class="admin-name">Sara Park</div>
-            <div class="admin-meta">Laptop Setup · 1/8 steps</div>
+          <div class="admin-tr">
+            <div class="admin-av">MR</div>
+            <div><div class="admin-name">Marcus R.</div><div class="admin-sub">Slack Setup · completed in 8 min</div></div>
+            <div class="status-pill done">Done</div>
           </div>
-          <div class="admin-badge prog">In progress</div>
+          <div class="admin-tr">
+            <div class="admin-av">SP</div>
+            <div><div class="admin-name">Sara Park</div><div class="admin-sub">MacBook Setup · step 1 of 8</div></div>
+            <div class="status-pill prog">In progress</div>
+          </div>
         </div>
       </div>
     </div>
 
   </div>
-</section>
+</div>
 
-<!-- ── Stats ──────────────────────────────────────────────────────────────── -->
-<section id="stats" class="reveal">
-  <p class="section-label">Why it matters</p>
-  <h2>Onboarding is <em>broken.</em><br>We're fixing it.</h2>
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-num">3×</div>
-      <div class="stat-label">faster onboarding vs. written docs</div>
+<!-- How it works -->
+<div class="section-divider"></div>
+<div class="section reveal" id="how" style="text-align:center;">
+  <p class="eyebrow" style="text-align:center;">How it works</p>
+  <h2 style="text-align:center;">Running in <span>3 steps</span></h2>
+  <p class="section-desc" style="margin:14px auto 0;text-align:center;">Upload your process once. Every new hire gets a personal AI guide from day one.</p>
+  <div class="steps-row">
+    <div class="step">
+      <div class="step-n">Step 01</div>
+      <div class="step-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div class="step-title">Upload your SOP</div>
+      <p class="step-desc">Drop in a PDF, Word doc, or plain text description. HandOff AI reads it and generates step-by-step instructions in seconds using Gemini.</p>
     </div>
-    <div class="stat-card">
-      <div class="stat-num">0</div>
-      <div class="stat-label">IT support tickets during setup</div>
+    <div class="step">
+      <div class="step-n">Step 02</div>
+      <div class="step-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      </div>
+      <div class="step-title">Share a link</div>
+      <p class="step-desc">Copy the onboarding link from your admin dashboard and send it to your new hire. One click — no login, no app download required.</p>
     </div>
-    <div class="stat-card">
-      <div class="stat-num">100%</div>
-      <div class="stat-label">step completion rate in guided sessions</div>
+    <div class="step">
+      <div class="step-n">Step 03</div>
+      <div class="step-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="step-title">AI guides in real time</div>
+      <p class="step-desc">The HandOff widget floats above every window, reads each step aloud, watches the screen, and helps when the user gets stuck.</p>
     </div>
   </div>
-</section>
+</div>
 
-<!-- ── Fetch.ai Agents ─────────────────────────────────────────────────────── -->
-<section id="agents" class="reveal">
-  <p class="section-label">Powered by Fetch.ai</p>
-  <h2>Autonomous AI <em>agents</em><br>working behind the scenes</h2>
+<!-- Differentiator -->
+<div class="section-divider"></div>
+<div class="section reveal">
+  <p class="eyebrow">Why HandOff</p>
+  <h2>Stop sending PDFs.<br><span>Start guiding.</span></h2>
+  <div class="diff-card">
+    <div class="diff-grid">
+      <div>
+        <div class="diff-side-label">Traditional onboarding</div>
+        <div class="diff-row bad">
+          <svg class="diff-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          New hire gets a PDF and is left alone
+        </div>
+        <div class="diff-row bad">
+          <svg class="diff-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          IT team gets flooded with support tickets
+        </div>
+        <div class="diff-row bad">
+          <svg class="diff-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          No visibility into who's completed what
+        </div>
+        <div class="diff-row bad">
+          <svg class="diff-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Docs go out of date, nobody notices
+        </div>
+      </div>
+      <div>
+        <div class="diff-side-label">HandOff AI</div>
+        <div class="diff-row good">
+          <svg class="diff-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          AI guides each step with voice and visual cues
+        </div>
+        <div class="diff-row good">
+          <svg class="diff-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Users can ask questions and get answers instantly
+        </div>
+        <div class="diff-row good">
+          <svg class="diff-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Real-time admin dashboard with AI summaries
+        </div>
+        <div class="diff-row good">
+          <svg class="diff-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Update the SOP once — every future session gets it
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-  <div class="agents-card">
-    <div class="agent-pill">
-      <div class="agent-pill-dot"></div>
+<!-- Stats -->
+<div class="section-divider"></div>
+<div class="section reveal" style="text-align:center;">
+  <p class="eyebrow" style="text-align:center;">By the numbers</p>
+  <h2 style="text-align:center;">Onboarding <span>actually</span> works<br>when someone's there to guide</h2>
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-n">3×</div>
+      <div class="stat-l">faster than reading a PDF</div>
+    </div>
+    <div class="stat">
+      <div class="stat-n">0</div>
+      <div class="stat-l">IT tickets during guided sessions</div>
+    </div>
+    <div class="stat">
+      <div class="stat-n">100%</div>
+      <div class="stat-l">step completion rate</div>
+    </div>
+  </div>
+</div>
+
+<!-- Agents -->
+<div class="section-divider"></div>
+<div class="section reveal" id="agents">
+  <p class="eyebrow">Infrastructure</p>
+  <h2>Powered by <span>autonomous</span><br>AI agents</h2>
+  <p class="section-desc">HandOff deploys a network of Fetch.ai uAgents that handle vision, context, knowledge retrieval, and post-session reporting — continuously, without human intervention.</p>
+
+  <div class="agents-wrap">
+    <div class="fetch-tag">
+      <div class="fetch-pulse"></div>
       Fetch.ai uAgents — always running
     </div>
-    <h3 style="font-size:26px;font-weight:700;letter-spacing:-.5px;margin-bottom:12px;">Your onboarding, on autopilot</h3>
-    <p class="agent-desc">HandOff deploys a network of autonomous Fetch.ai uAgents that handle vision, context, knowledge retrieval, and post-session reporting — all without human intervention.</p>
+    <h3 style="font-size:24px;font-weight:700;letter-spacing:-.4px;margin-bottom:10px;">Your onboarding, on autopilot</h3>
+    <p style="font-size:14px;color:rgba(255,255,255,0.3);max-width:520px;line-height:1.65;">Four specialized agents work in the background so every session is smooth, verified, and tracked — automatically.</p>
 
-    <div class="agent-list">
-      <div class="agent-item">
-        <div class="agent-item-icon">🧠</div>
+    <div class="agents-grid">
+      <div class="agent-card">
+        <div class="agent-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </div>
         <div>
-          <div class="agent-item-title">ContextAgent</div>
-          <div class="agent-item-desc">Orchestrates vision + knowledge — decides what guidance to give next</div>
+          <div class="agent-name">ContextAgent</div>
+          <div class="agent-desc">Orchestrates vision and knowledge — decides what guidance to surface next based on the current screen</div>
         </div>
       </div>
-      <div class="agent-item">
-        <div class="agent-item-icon">👁️</div>
+      <div class="agent-card">
+        <div class="agent-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
         <div>
-          <div class="agent-item-title">VisionAgent</div>
-          <div class="agent-item-desc">Analyses screenshots to verify the employee is on the right screen</div>
+          <div class="agent-name">VisionAgent</div>
+          <div class="agent-desc">Analyses screenshots to verify the employee is on the correct screen before each step advances</div>
         </div>
       </div>
-      <div class="agent-item">
-        <div class="agent-item-icon">📚</div>
+      <div class="agent-card">
+        <div class="agent-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </div>
         <div>
-          <div class="agent-item-title">KnowledgeAgent</div>
-          <div class="agent-item-desc">Retrieves the right SOP steps and serves them to the widget in real-time</div>
+          <div class="agent-name">KnowledgeAgent</div>
+          <div class="agent-desc">Retrieves the right SOP steps and serves them to the widget in real-time as the user progresses</div>
         </div>
       </div>
-      <div class="agent-item">
-        <div class="agent-item-icon">📊</div>
+      <div class="agent-card">
+        <div class="agent-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
         <div>
-          <div class="agent-item-title">CompletionAgent</div>
-          <div class="agent-item-desc">Automatically generates AI session summaries and sends them to the admin feed every 10 seconds</div>
+          <div class="agent-name">CompletionAgent</div>
+          <div class="agent-desc">Scans for completed sessions every 10 seconds, generates AI summaries, and feeds them to the admin dashboard automatically</div>
         </div>
       </div>
     </div>
   </div>
-</section>
+</div>
 
-<!-- ── CTA ────────────────────────────────────────────────────────────────── -->
-<section id="cta" class="reveal" style="text-align:center;align-items:center;display:flex;flex-direction:column;">
-  <div class="cta-glow"></div>
-  <p class="section-label">Get started</p>
-  <h2>Your new hires deserve<br><em>better than a PDF</em></h2>
-  <p class="section-sub" style="margin:0 auto;">HandOff AI is free to try. Upload your first SOP and have a fully guided onboarding flow running in under 5 minutes.</p>
-  <div class="cta-actions">
-    <a href="#" class="btn-hero" onclick="alert('Coming soon — reach us at hello@handoff.ai')">Download the app →</a>
-    <a href="#how" class="btn-hero-ghost">See how it works</a>
+<!-- CTA -->
+<div class="section-divider"></div>
+<div class="cta-section reveal" id="cta">
+  <p class="eyebrow">Get started today</p>
+  <h2>Your new hires deserve<br>better than <span>a PDF.</span></h2>
+  <p class="section-desc" style="margin:0 auto;text-align:center;">Upload your first SOP and have a fully guided onboarding flow running in under 5 minutes. Free to try.</p>
+  <div class="cta-btns">
+    <a href="#" class="btn-lg" onclick="alert('Coming soon — reach us at hello@handoff.ai'); return false;">Download for Mac</a>
+    <a href="#features" class="btn-lg-ghost">See how it works</a>
   </div>
-  <p style="margin-top:20px;font-size:13px;color:rgba(255,255,255,.2);">No credit card required · Works on macOS</p>
-</section>
+  <p class="cta-note">No credit card required · macOS 13 or later</p>
+</div>
 
-<!-- ── Footer ─────────────────────────────────────────────────────────────── -->
+<!-- Footer -->
 <footer>
-  <div class="nav-logo" style="font-size:14px;">
-    <div class="nav-dot"></div>
+  <a class="logo" href="#" style="font-size:14px;">
+    <div class="logo-mark" style="width:20px;height:20px;">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </div>
     HandOff AI
-  </div>
+  </a>
   <div class="footer-links">
-    <a href="#how">How it works</a>
     <a href="#features">Features</a>
+    <a href="#how">How it works</a>
     <a href="#agents">AI Agents</a>
   </div>
   <span>© 2026 HandOff AI. All rights reserved.</span>
 </footer>
 
 <script>
-  // Scroll reveal
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible') })
-  }, { threshold: 0.1 })
-  document.querySelectorAll('.reveal').forEach(el => observer.observe(el))
+  const obs = new IntersectionObserver(
+    entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in') }),
+    { threshold: 0.08 }
+  )
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el))
 </script>
 
 </body>
