@@ -111,10 +111,11 @@ async def upload_sop_file(file: UploadFile = File(...)):
     if len(raw_bytes) > 20 * 1024 * 1024:  # 20 MB cap
         raise HTTPException(status_code=413, detail="File too large (max 20 MB)")
 
-    # Extract text from DOCX
+    import io
+
+    # Extract text from DOCX → send as plain text (more reliable than binary)
     if mime == "docx":
         try:
-            import io
             from docx import Document  # type: ignore
             doc = Document(io.BytesIO(raw_bytes))
             text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
@@ -127,6 +128,20 @@ async def upload_sop_file(file: UploadFile = File(...)):
             )
         except Exception as exc:
             raise HTTPException(status_code=422, detail=f"Could not read Word file: {exc}")
+
+    # Extract text from PDF → send as plain text (avoids Gemini PDF inline limitations)
+    if mime == "application/pdf":
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(raw_bytes))
+            pages = [page.extract_text() or "" for page in reader.pages]
+            text = "\n\n".join(p.strip() for p in pages if p.strip())
+            if not text:
+                raise ValueError("No readable text found in PDF.")
+            raw_bytes = text.encode("utf-8")
+            mime = "text/plain"
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"Could not read PDF: {exc}")
 
     steps = await generate_steps_from_file(raw_bytes, mime)
     if not steps:

@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 _client    = genai.Client(api_key=settings.gemini_api_key)
 _MODEL     = settings.gemini_model          # used for vision / verification (accuracy matters)
-_FAST_MODEL = "gemini-2.0-flash"            # used for SOP generation (speed matters)
+_FAST_MODEL = _MODEL  # use same model as vision — gemini-2.0-flash no longer available
 
 # Retry decorator — retries on rate-limit (429) and transient server errors
 _retry = retry(

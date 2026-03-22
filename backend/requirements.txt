@@ -41,6 +41,7 @@ numpy>=1.26.4
 
 # File upload support (required for multipart/form-data endpoints)
 python-multipart>=0.0.9
+pypdf>=4.0.0
 
 # Logging
 structlog==24.4.0
