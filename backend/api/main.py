@@ -32,6 +32,7 @@ from fastapi.responses import RedirectResponse
 from api.routes import sop as sop_router
 from api.routes import sessions as sessions_router
 from api.routes import admin as admin_router
+from api.routes import vision as vision_router
 from config import settings
 from models import (
     WsInbound, WsOutbound, WsMessageType,
@@ -84,6 +85,7 @@ app.add_middleware(
 app.include_router(sop_router.router)
 app.include_router(sessions_router.router)
 app.include_router(admin_router.router)
+app.include_router(vision_router.router)
 
 
 @app.get("/", include_in_schema=False)

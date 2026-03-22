@@ -1,0 +1,26 @@
+{
+  "name": "handoff-overlay",
+  "version": "1.0.0",
+  "description": "HandOff.AI — always-on-top overlay widget",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "ELECTRON_DEV=true electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^30.5.1",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "ai.handoff.overlay",
+    "productName": "HandOff",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  }
+}

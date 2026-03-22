@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import DemoPage from './pages/Demo/DemoPage'
 import AdminDashboard from './pages/Admin/Dashboard'
 import RecordModePage from './pages/Admin/RecordMode'
+import OverlayPage from './pages/OverlayPage'
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
         <Route path="/demo"    element={<DemoPage />} />
         <Route path="/admin"   element={<AdminDashboard />} />
         <Route path="/admin/record" element={<RecordModePage />} />
+        <Route path="/overlay" element={<OverlayPage />} />
       </Routes>
     </BrowserRouter>
   )

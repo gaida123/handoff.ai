@@ -1,0 +1,26 @@
+const { contextBridge, ipcRenderer } = require('electron')
+
+contextBridge.exposeInMainWorld('handoff', {
+  // UI
+  toggleCollapse:  ()         => ipcRenderer.invoke('toggle-collapse'),
+  setIgnoreMouse:  (ignore)   => ipcRenderer.invoke('set-ignore-mouse', ignore),
+  getCollapsed:    ()         => ipcRenderer.invoke('get-collapsed'),
+
+  // Step lifecycle — drives the idle timer in main process
+  stepStarted:     (stepIndex) => ipcRenderer.invoke('step-started', stepIndex),
+  sessionEnded:    ()          => ipcRenderer.invoke('session-ended'),
+
+  // Screen capture
+  captureScreen:   ()         => ipcRenderer.invoke('capture-screen'),
+
+  // Vision analysis — proxied through main process to avoid renderer network crashes
+  analyzeScreen:   (payload)  => ipcRenderer.invoke('analyze-screen', payload),
+
+  // Idle alerts pushed from main → renderer
+  onIdleAlert:     (cb) => {
+    ipcRenderer.on('idle-alert', (_, payload) => cb(payload))
+  },
+  offIdleAlert:    ()   => {
+    ipcRenderer.removeAllListeners('idle-alert')
+  },
+})

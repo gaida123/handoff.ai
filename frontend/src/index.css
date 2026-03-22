@@ -29,6 +29,14 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Overlay / Electron mode — fully transparent body */
+body.overlay-mode,
+body.overlay-mode #root {
+  background: transparent !important;
+  overflow: hidden;
+}
+
+
 /* Ghost cursor glow keyframe */
 @keyframes ghost-pulse {
   0%, 100% { filter: drop-shadow(0 0 6px #6366f1) drop-shadow(0 0 12px #6366f1aa); }

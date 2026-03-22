@@ -1,27 +1,16 @@
 """
 Gemini service — wraps all Google Gemini API calls made by HandOff.AI.
-
-Key design decisions vs the naive approach:
-  1. Structured output  — response_mime_type="application/json" eliminates
-     markdown-fence regex stripping.  Gemini is contractually bound to emit
-     valid JSON, so _parse_* helpers do clean Pydantic validation only.
-  2. Retry with backoff — transient 429 / 503 errors auto-recover via tenacity
-     without leaking exceptions to the caller.
-  3. Coordinate clamping — raw model output is clamped to [0, 1] so a
-     hallucinated value of 1.03 never moves the Ghost Cursor off-screen.
-  4. Intent classification — classify_voice_intent() replaces the brittle
-     keyword list in knowledge_agent.py with a single fast LLM call.
+Uses the google-genai SDK (replaces deprecated google-generativeai).
 """
 
-import asyncio
 import json
 import logging
 import re
 from typing import Optional
 
-import google.generativeai as genai
-import google.api_core.exceptions as gapi_exc
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
+from google import genai
+from google.genai import types
+from google.api_core import exceptions as gapi_exc
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -34,32 +23,73 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=settings.gemini_api_key)
-
-_model = genai.GenerativeModel(settings.gemini_model)
-
-# Safety config shared by all calls — vision analysis of SaaS UIs is benign
-_SAFETY_OFF = {
-    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-}
+_client = genai.Client(api_key=settings.gemini_api_key)
+_MODEL  = settings.gemini_model
 
 # Retry decorator — retries on rate-limit (429) and transient server errors
-_RETRYABLE = retry_if_exception_type((
-    gapi_exc.ResourceExhausted,
-    gapi_exc.ServiceUnavailable,
-    gapi_exc.DeadlineExceeded,
-))
-
 _retry = retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=_RETRYABLE,
+    retry=retry_if_exception_type((
+        gapi_exc.ResourceExhausted,
+        gapi_exc.ServiceUnavailable,
+        gapi_exc.DeadlineExceeded,
+    )),
     before_sleep=before_sleep_log(logger, logging.WARNING),
     reraise=True,
 )
+
+
+def _clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
+    return max(lo, min(hi, value))
+
+
+# ── Vision helper ─────────────────────────────────────────────────────────────
+
+import base64 as _base64
+
+
+def _extract_text(response) -> str:
+    """
+    Extract only non-thinking text parts from a Gemini response.
+    gemini-2.5-flash has a thinking mode that can prepend thought tokens
+    before the actual JSON output — we skip those parts.
+    """
+    parts = []
+    for candidate in response.candidates:
+        for part in candidate.content.parts:
+            if part.text and not getattr(part, "thought", False):
+                parts.append(part.text)
+    return "".join(parts).strip()
+
+
+async def _call_vision(prompt: str, image_base64: str) -> str:
+    raw_bytes  = _base64.b64decode(image_base64)
+    image_part = types.Part.from_bytes(data=raw_bytes, mime_type="image/png")
+
+    response = await _client.aio.models.generate_content(
+        model=_MODEL,
+        contents=[prompt, image_part],
+        config=types.GenerateContentConfig(
+            temperature=0.05,
+            max_output_tokens=1024,
+            response_mime_type="application/json",
+        ),
+    )
+    return _extract_text(response)
+
+
+async def _call_text(prompt: str, max_tokens: int = 256) -> str:
+    response = await _client.aio.models.generate_content(
+        model=_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0.0,
+            max_output_tokens=max_tokens,
+            response_mime_type="application/json",
+        ),
+    )
+    return _extract_text(response)
 
 
 # ── Coordinate extraction ─────────────────────────────────────────────────────
@@ -67,15 +97,13 @@ _retry = retry(
 _COORDINATE_PROMPT = """\
 You are a UI element locator for a web application co-pilot.
 
-I will give you a screenshot of a web application and ask you to locate a specific UI element.
-
 Target element: "{target_description}"
 CSS selector hint (may be stale — treat as a clue only): "{selector_hint}"
 
 Instructions:
 1. Find the element described above in the screenshot.
 2. Return its centre as fractional coordinates (0.0 = left/top, 1.0 = right/bottom).
-3. Return a fractional bounding box {x, y, w, h}.
+3. Return a fractional bounding box {{x, y, w, h}}.
 4. Report any error modal, blocking dialog, or unexpected overlay if visible.
 5. Set confidence between 0.0 and 1.0.
 
@@ -97,55 +125,27 @@ async def locate_element(
     target_description: str,
     selector_hint: Optional[str] = None,
 ) -> dict:
-    """
-    Send a base64-encoded PNG screenshot to Gemini Vision.
-    Returns a validated dict matching VisionResponse payload fields.
-    """
     prompt = _COORDINATE_PROMPT.format(
         target_description=target_description,
         selector_hint=selector_hint or "none provided",
     )
-    image_data = {"mime_type": "image/png", "data": screenshot_base64}
-
     try:
-        raw = await _call_vision_with_retry(prompt, image_data)
+        raw = await _call_vision(prompt, screenshot_base64)
         return _parse_vision_response(raw)
     except Exception as exc:
-        logger.error("Gemini Vision failed after retries: %s", exc)
+        logger.error("Gemini Vision failed: %s", exc)
         return _vision_fallback(str(exc))
 
 
-@_retry
-async def _call_vision_with_retry(prompt: str, image_data: dict) -> str:
-    response = await _model.generate_content_async(
-        [prompt, image_data],
-        generation_config=genai.GenerationConfig(
-            temperature=0.05,
-            max_output_tokens=512,
-            response_mime_type="application/json",
-        ),
-        safety_settings=_SAFETY_OFF,
-        request_options={"timeout": settings.gemini_vision_timeout_seconds},
-    )
-    return response.text.strip()
-
-
 def _parse_vision_response(raw: str) -> dict:
-    """
-    Parse and validate Gemini's JSON vision response.
-    With response_mime_type="application/json" the output is guaranteed JSON,
-    but we still clamp coordinates to [0, 1] in case of hallucinated values.
-    """
     try:
         data = json.loads(raw)
     except json.JSONDecodeError as exc:
-        # Fallback: strip accidental markdown fences (should never happen with
-        # response_mime_type="application/json", but belt-and-suspenders)
         cleaned = re.sub(r"```(?:json)?\s*", "", raw).strip().rstrip("`")
         try:
             data = json.loads(cleaned)
         except json.JSONDecodeError:
-            logger.warning("Unparseable Gemini vision response: %s | raw=%s", exc, raw[:200])
+            logger.warning("Unparseable vision response: %s", exc)
             return _vision_fallback(f"parse_error: {exc}")
 
     bbox = data.get("bounding_box")
@@ -153,48 +153,29 @@ def _parse_vision_response(raw: str) -> dict:
         bbox = {k: _clamp(float(bbox.get(k, 0.0))) for k in ("x", "y", "w", "h")}
 
     return {
-        "found": bool(data.get("found", False)),
-        "target_x": _clamp(float(data.get("target_x", 0.0))),
-        "target_y": _clamp(float(data.get("target_y", 0.0))),
-        "bounding_box": bbox,
-        "detected_error_modal": bool(data.get("detected_error_modal", False)),
-        "error_modal_text": data.get("error_modal_text") or None,
-        "confidence": _clamp(float(data.get("confidence", 0.0))),
+        "found":                  bool(data.get("found", False)),
+        "target_x":               _clamp(float(data.get("target_x", 0.0))),
+        "target_y":               _clamp(float(data.get("target_y", 0.0))),
+        "bounding_box":           bbox,
+        "detected_error_modal":   bool(data.get("detected_error_modal", False)),
+        "error_modal_text":       data.get("error_modal_text") or None,
+        "confidence":             _clamp(float(data.get("confidence", 0.0))),
     }
 
 
 def _vision_fallback(reason: str) -> dict:
     return {
-        "found": False,
-        "target_x": 0.5,
-        "target_y": 0.5,
-        "bounding_box": None,
-        "detected_error_modal": False,
-        "error_modal_text": None,
-        "confidence": 0.0,
-        "_error": reason,
+        "found": False, "target_x": 0.5, "target_y": 0.5,
+        "bounding_box": None, "detected_error_modal": False,
+        "error_modal_text": None, "confidence": 0.0, "_error": reason,
     }
 
 
-def _clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
-    return max(lo, min(hi, value))
-
-
 # ── Voice intent classification ───────────────────────────────────────────────
-#
-# Replaces the brittle keyword-list in knowledge_agent.py with a single fast
-# LLM call.  The result drives step navigation and autofill decisions.
 
 _VALID_INTENTS = frozenset({
-    "navigate_next",
-    "navigate_back",
-    "navigate_repeat",
-    "navigate_skip",
-    "confirm",
-    "fill",
-    "question",
-    "sop_switch",
-    "unknown",
+    "navigate_next", "navigate_back", "navigate_repeat", "navigate_skip",
+    "confirm", "fill", "question", "sop_switch", "unknown",
 })
 
 _INTENT_PROMPT = """\
@@ -219,47 +200,24 @@ Respond with a JSON object only — no explanation:
 """
 
 
-async def classify_voice_intent(
-    command: str,
-    current_step_index: int = 0,
-) -> str:
-    """
-    Classify a raw voice command into one of the intent categories.
-    Falls back to keyword matching if the LLM call fails.
-    """
+async def classify_voice_intent(command: str, current_step_index: int = 0) -> str:
     if not command or not command.strip():
         return "navigate_next"
-
     prompt = _INTENT_PROMPT.format(
         step_index=current_step_index,
-        command=command.replace('"', "'"),  # guard against prompt injection
+        command=command.replace('"', "'"),
     )
-
     try:
-        raw = await _call_intent_with_retry(prompt)
+        raw  = await _call_text(prompt, max_tokens=32)
         data = json.loads(raw)
         intent = data.get("intent", "unknown")
         return intent if intent in _VALID_INTENTS else "unknown"
     except Exception as exc:
-        logger.warning("Intent classification failed: %s — falling back to keywords", exc)
+        logger.warning("Intent classification failed: %s", exc)
         return _keyword_intent_fallback(command)
 
 
-@_retry
-async def _call_intent_with_retry(prompt: str) -> str:
-    response = await _model.generate_content_async(
-        prompt,
-        generation_config=genai.GenerationConfig(
-            temperature=0.0,
-            max_output_tokens=32,
-            response_mime_type="application/json",
-        ),
-    )
-    return response.text.strip()
-
-
 def _keyword_intent_fallback(command: str) -> str:
-    """Hard-coded fallback used only when the LLM call itself fails."""
     cmd = command.lower()
     if any(k in cmd for k in ("next", "continue", "proceed", "go ahead", "done")):
         return "navigate_next"
@@ -276,10 +234,10 @@ def _keyword_intent_fallback(command: str) -> str:
     return "unknown"
 
 
-# ── SOP generation from Record Mode events ───────────────────────────────────
+# ── SOP generation from Record Mode events ────────────────────────────────────
 
 _SOP_GENERATION_PROMPT = """\
-You are an expert technical writer. Convert the following list of raw DOM interaction events (captured during an admin walkthrough of a SaaS application) into a clear, friendly, numbered SOP that a new user can follow.
+You are an expert technical writer. Convert the following list of raw DOM interaction events into a clear, friendly, numbered SOP that a new user can follow.
 
 DOM Events (JSON array):
 {events_json}
@@ -309,39 +267,70 @@ Return a JSON array only — no markdown, no explanation:
 
 
 async def generate_sop_steps(events: list[dict]) -> list[dict]:
-    """
-    Use Gemini to convert raw Record Mode DOM events into structured SOP steps.
-    Called by the Admin API when a recording session is finalised.
-    """
     prompt = _SOP_GENERATION_PROMPT.format(
         events_json=json.dumps(events, indent=2, default=str)
     )
-
     try:
-        raw = await _call_sop_gen_with_retry(prompt)
-        # With response_mime_type="application/json", raw is guaranteed valid JSON
-        # But Gemini may return an object with a key rather than a bare array
+        raw    = await _call_text(prompt, max_tokens=2048)
         parsed = json.loads(raw)
         if isinstance(parsed, dict):
-            # Extract the array from whichever key contains it
             for v in parsed.values():
                 if isinstance(v, list):
                     parsed = v
                     break
         return parsed if isinstance(parsed, list) else []
     except Exception as exc:
-        logger.error("SOP generation failed after retries: %s", exc)
+        logger.error("SOP generation failed: %s", exc)
         return []
 
 
-@_retry
-async def _call_sop_gen_with_retry(prompt: str) -> str:
-    response = await _model.generate_content_async(
-        prompt,
-        generation_config=genai.GenerationConfig(
-            temperature=0.2,
-            max_output_tokens=2048,
-            response_mime_type="application/json",
-        ),
+# ── Screen analysis for step verification + idle hints ────────────────────────
+
+_ANALYZE_SCREEN_PROMPT = """\
+You are an AI co-pilot helping a user follow a step-by-step onboarding guide.
+
+Current step the user SHOULD be performing:
+  Step {step_index}: "{instruction_text}"
+
+Look at the screenshot and determine:
+1. Whether the user appears to be on the correct screen / app for this step.
+2. What they should click, type, or look for next — be specific (e.g. "Click the blue 'Sign In' button in the top-right corner").
+3. A confidence 0.0–1.0 that you can see the relevant UI.
+
+Return JSON only:
+{{
+  "on_correct_screen": <bool>,
+  "hint": "<one concise sentence, max 20 words>",
+  "element_description": "<what the UI element looks like and where it is, or null>",
+  "confidence": <float 0.0-1.0>
+}}
+"""
+
+
+async def analyze_screen_for_step(
+    screenshot_base64: str,
+    step_index: int,
+    instruction_text: str,
+) -> dict:
+    prompt = _ANALYZE_SCREEN_PROMPT.format(
+        step_index=step_index,
+        instruction_text=instruction_text,
     )
-    return response.text.strip()
+    try:
+        raw  = await _call_vision(prompt, screenshot_base64)
+        data = json.loads(raw)
+        return {
+            "on_correct_screen":   bool(data.get("on_correct_screen", False)),
+            "hint":                data.get("hint", ""),
+            "element_description": data.get("element_description"),
+            "confidence":          _clamp(float(data.get("confidence", 0.0))),
+        }
+    except Exception as exc:
+        logger.error("Screen analysis failed: %s", exc)
+        return {
+            "on_correct_screen": False,
+            "hint": "",
+            "element_description": None,
+            "confidence": 0.0,
+            "_error": str(exc),
+        }
