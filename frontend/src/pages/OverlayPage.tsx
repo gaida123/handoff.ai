@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Mic, MicOff, Volume2, Loader2, X, CheckCircle2,
-  AlertTriangle, ChevronLeft, ChevronRight, Zap,
+  AlertTriangle, ChevronLeft, ChevronRight, Zap, BookOpen,
 } from 'lucide-react'
 import { useSession } from '../hooks/useSession'
 import { useVoice } from '../hooks/useVoice'
@@ -123,6 +123,13 @@ export default function OverlayPage() {
   const [sessionId,   setSessionId]   = useState<string | null>(sessionParam)
   const [sessionLoading, setSessionLoading] = useState(!!sessionParam)
 
+  // Company SOP picker
+  const [availableSops, setAvailableSops] = useState<{id: string; title: string; role: string; steps: any[]}[]>([])
+  const [sopPickerOpen, setSopPickerOpen] = useState(false)
+  const [pickerSopId,   setPickerSopId]   = useState('')
+  const [pickerName,    setPickerName]    = useState('')
+  const [startingSession, setStartingSession] = useState(false)
+
   // Demo state
   const [demoMode,    setDemoMode]    = useState(false)
   const [demoStep,    setDemoStep]    = useState(0)
@@ -163,6 +170,37 @@ export default function OverlayPage() {
       .finally(() => setSessionLoading(false))
   }, [sessionParam]) // eslint-disable-line
 
+  // ── Fetch company SOPs from backend ──────────────────────────────────────
+  useEffect(() => {
+    fetch(`${LOCAL_API}/local/sops`)
+      .then(r => r.json())
+      .then(data => setAvailableSops(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [])
+
+  // ── Start a company-mode session from the widget picker ───────────────────
+  const startCompanySession = async () => {
+    if (!pickerName.trim() || !pickerSopId) return
+    setStartingSession(true)
+    try {
+      const res = await fetch(`${LOCAL_API}/local/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sop_id: pickerSopId, employee_name: pickerName.trim() }),
+      })
+      if (!res.ok) throw new Error('Failed')
+      const data = await res.json()
+      setSessionId(data.id)
+      setActiveSteps(data.sop.steps)
+      setDemoChecked(data.sop.steps.map(() => false))
+      setSopPickerOpen(false)
+      setDemoMode(true)
+      setDemoStep(0)
+      if (electronAPI) electronAPI.stepStarted(0)
+    } catch (_e) { /* silent — stays on picker */ }
+    finally { setStartingSession(false) }
+  }
+
   // ── Transparent body ─────────────────────────────────────────────────────
   useEffect(() => {
     document.body.classList.add('overlay-mode')
@@ -170,7 +208,7 @@ export default function OverlayPage() {
   }, [])
 
   // ── Tell Electron to expand/collapse window based on content ─────────────
-  const isExpanded = demoMode || backendStarted
+  const isExpanded = demoMode || backendStarted || sopPickerOpen
   useEffect(() => {
     electronAPI?.setExpanded?.(isExpanded)
   }, [isExpanded])
@@ -209,6 +247,11 @@ export default function OverlayPage() {
     setQuery('')
     setIdleHint(null)
     setVerifyHint(null)
+    setSopPickerOpen(false)
+    setPickerSopId('')
+    setPickerName('')
+    setActiveSteps(DEMO_STEPS)
+    setSessionId(null)
     electronAPI?.hideGhostCursor?.()
     if (electronAPI) { electronAPI.sessionEnded(); electronAPI.offIdleAlert?.() }
     idleCleanupRef.current?.()
@@ -412,15 +455,18 @@ export default function OverlayPage() {
                 </span>
               </div>
             ) : isComplete ? (
-              <span className="text-[13px] text-white/60">Setup complete</span>
+              <span className="text-[13px] text-white/60">All done — great work!</span>
+            ) : sopPickerOpen ? (
+              <span className="text-[13px] text-white/50">Choose your onboarding guide</span>
             ) : (
               <button
-                onClick={startDemo}
+                onClick={() => setSopPickerOpen(true)}
                 className="flex items-center gap-1.5 text-[13px] text-white/40 hover:text-white/80
                            transition-colors duration-150"
               >
-                <Zap className="w-3 h-3" />
-                Start Google Account Setup
+                {availableSops.length > 0
+                  ? <><BookOpen className="w-3 h-3" /> Start onboarding</>
+                  : <><Zap className="w-3 h-3" /> Start Google Account Setup</>}
               </button>
             )}
           </div>
@@ -490,9 +536,9 @@ export default function OverlayPage() {
             )}
 
             {/* Close */}
-            {(demoMode || backendStarted) && (
+            {(demoMode || backendStarted || sopPickerOpen) && (
               <button
-                onClick={demoMode ? stopDemo : handleBackendStop}
+                onClick={demoMode ? stopDemo : backendStarted ? handleBackendStop : () => setSopPickerOpen(false)}
                 className="w-7 h-7 rounded-lg flex items-center justify-center
                            text-white/20 hover:text-white/60 hover:bg-white/5 transition-all"
               >
@@ -504,7 +550,7 @@ export default function OverlayPage() {
 
         {/* ── Expanded content ─────────────────────────────────────────────── */}
         <AnimatePresence initial={false}>
-          {(demoMode || backendStarted) && (
+          {(demoMode || backendStarted || sopPickerOpen) && (
             <motion.div
               key="content"
               initial={{ height: 0, opacity: 0 }}
@@ -514,6 +560,105 @@ export default function OverlayPage() {
               className="overflow-hidden"
             >
               <div className="border-t border-white/[0.06] px-4 py-3 space-y-3">
+
+                {/* ── SOP picker ─────────────────────────────────────────── */}
+                {sopPickerOpen && !demoMode && (
+                  <div className="space-y-2.5">
+                    {/* Company SOPs */}
+                    {availableSops.length > 0 && (
+                      <div className="space-y-1.5">
+                        {availableSops.map(sop => (
+                          <button
+                            key={sop.id}
+                            onClick={() => setPickerSopId(sop.id)}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all ${
+                              pickerSopId === sop.id
+                                ? 'bg-white/12 border border-white/20'
+                                : 'bg-white/4 border border-white/8 hover:bg-white/8'
+                            }`}
+                          >
+                            <div className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 transition-all ${
+                              pickerSopId === sop.id ? 'border-white bg-white' : 'border-white/25'
+                            }`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] text-white/80 truncate">{sop.title}</p>
+                              <p className="text-[11px] text-white/30">{sop.role} · {sop.steps.length} steps</p>
+                            </div>
+                          </button>
+                        ))}
+                        {/* Divider + demo option */}
+                        <div className="flex items-center gap-2 py-0.5">
+                          <div className="flex-1 h-px bg-white/6" />
+                          <span className="text-[10px] text-white/20 uppercase tracking-wider">or</span>
+                          <div className="flex-1 h-px bg-white/6" />
+                        </div>
+                        <button
+                          onClick={() => { setSopPickerOpen(false); startDemo() }}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all
+                            bg-white/4 border border-white/8 hover:bg-white/8`}
+                        >
+                          <div className="w-3.5 h-3.5 rounded-full border-2 border-white/25 shrink-0" />
+                          <div>
+                            <p className="text-[13px] text-white/50">Demo — Google Workspace Setup</p>
+                            <p className="text-[11px] text-white/25">8 steps · for testing only</p>
+                          </div>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* No SOPs — just show demo */}
+                    {availableSops.length === 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-[11px] text-white/30 px-1">No company guides yet. Using demo:</p>
+                        <button
+                          onClick={() => { setSopPickerOpen(false); startDemo() }}
+                          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left bg-white/4 border border-white/8 hover:bg-white/8 transition-all"
+                        >
+                          <Zap className="w-3.5 h-3.5 text-white/30" />
+                          <div>
+                            <p className="text-[13px] text-white/60">Demo — Google Workspace Setup</p>
+                            <p className="text-[11px] text-white/25">8 steps</p>
+                          </div>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Name input — appears when a company SOP is selected */}
+                    <AnimatePresence>
+                      {pickerSopId && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-2 overflow-hidden"
+                        >
+                          <input
+                            autoFocus
+                            value={pickerName}
+                            onChange={e => setPickerName(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && startCompanySession()}
+                            placeholder="Your name to track progress…"
+                            className="w-full bg-white/6 border border-white/10 rounded-lg px-3 py-2
+                                       text-[13px] text-white placeholder-white/25
+                                       focus:outline-none focus:border-white/30"
+                          />
+                          <button
+                            onClick={startCompanySession}
+                            disabled={!pickerName.trim() || startingSession}
+                            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg
+                                       bg-white text-black text-[13px] font-medium
+                                       disabled:opacity-40 disabled:cursor-not-allowed
+                                       hover:bg-white/90 transition-colors"
+                          >
+                            {startingSession
+                              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Starting…</>
+                              : 'Start →'}
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
 
                 {/* Instruction text */}
                 {demoMode && !isComplete && (
@@ -534,13 +679,13 @@ export default function OverlayPage() {
                   <div className="flex items-center gap-2 py-1">
                     <CheckCircle2 className="w-4 h-4 text-white/60 flex-shrink-0" />
                     <p className="text-[13px] text-white/60">
-                      Google Workspace account fully configured.
+                      All steps complete — you're all set!
                     </p>
                     <button
                       onClick={stopDemo}
                       className="ml-auto text-[12px] text-white/25 hover:text-white/50 transition-colors"
                     >
-                      Restart
+                      Done
                     </button>
                   </div>
                 )}
