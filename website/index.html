@@ -8,8 +8,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet" />
   <script>
-    // Update this to your deployed Vercel frontend URL once live
-    const ADMIN_URL = 'https://handoff-ai.vercel.app'
+    // Points to local dev when opened as a file or on localhost,
+    // otherwise uses the deployed Vercel frontend URL.
+    const ADMIN_URL = (location.hostname === 'localhost' || location.protocol === 'file:')
+      ? 'http://localhost:5173'
+      : 'https://handoff-ai.vercel.app'
   </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
