@@ -40,6 +40,7 @@ export default function AdminDashboard() {
   const fileInputRef                = useRef<HTMLInputElement>(null)
   const [generatedSteps, setGeneratedSteps] = useState<SopStep[]>([])
   const [generating, setGenerating] = useState(false)
+  const [genStatus,  setGenStatus]  = useState('')
   const [saving, setSaving]         = useState(false)
   const [genError, setGenError]     = useState('')
 
@@ -60,6 +61,18 @@ export default function AdminDashboard() {
     setGenerating(true)
     setGenError('')
     setGeneratedSteps([])
+
+    // Cycle through status messages so it doesn't feel frozen
+    const messages = inputMode === 'file'
+      ? ['Reading your document…', 'Identifying steps…', 'Structuring the guide…', 'Almost there…']
+      : ['Thinking through the workflow…', 'Breaking into steps…', 'Structuring the guide…', 'Almost there…']
+    let msgIdx = 0
+    setGenStatus(messages[0])
+    const msgTimer = setInterval(() => {
+      msgIdx = (msgIdx + 1) % messages.length
+      setGenStatus(messages[msgIdx])
+    }, 2800)
+
     try {
       let res: Response
       if (inputMode === 'file' && uploadedFile) {
@@ -83,6 +96,8 @@ export default function AdminDashboard() {
     } catch (e: any) {
       setGenError(e.message || 'AI generation failed. Check the backend is running.')
     } finally {
+      clearInterval(msgTimer)
+      setGenStatus('')
       setGenerating(false)
     }
   }
@@ -478,7 +493,7 @@ export default function AdminDashboard() {
                     className="mt-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-white/8 hover:bg-white/12 text-sm text-white/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {generating
-                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Analysing…</>
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /><span>{genStatus}</span></>
                       : <><Sparkles className="w-4 h-4 text-purple-400" /> Generate steps with AI</>}
                   </button>
                   {genError && (

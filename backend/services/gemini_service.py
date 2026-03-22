@@ -23,8 +23,9 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
-_client = genai.Client(api_key=settings.gemini_api_key)
-_MODEL  = settings.gemini_model
+_client    = genai.Client(api_key=settings.gemini_api_key)
+_MODEL     = settings.gemini_model          # used for vision / verification (accuracy matters)
+_FAST_MODEL = "gemini-2.0-flash"            # used for SOP generation (speed matters)
 
 # Retry decorator — retries on rate-limit (429) and transient server errors
 _retry = retry(
@@ -317,7 +318,17 @@ async def generate_steps_from_description(description: str) -> list[dict]:
     """Generate SOP steps from a plain-English description."""
     prompt = _PLAIN_TEXT_SOP_PROMPT.format(description=description.replace('"', "'"))
     try:
-        raw    = await _call_text(prompt, max_tokens=2048)
+        response = await _client.aio.models.generate_content(
+            model=_FAST_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.1,
+                max_output_tokens=1200,
+                response_mime_type="application/json",
+                thinking_config=_THINKING_OFF,
+            ),
+        )
+        raw    = _extract_text(response)
         parsed = json.loads(raw)
         if isinstance(parsed, dict):
             for v in parsed.values():
@@ -377,11 +388,11 @@ async def generate_steps_from_file(file_bytes: bytes, mime_type: str) -> list[di
 
     try:
         response = await _client.aio.models.generate_content(
-            model=_MODEL,
+            model=_FAST_MODEL,
             contents=[_FILE_SOP_PROMPT, image_part],
             config=types.GenerateContentConfig(
                 temperature=0.1,
-                max_output_tokens=4096,
+                max_output_tokens=1500,
                 response_mime_type="application/json",
                 thinking_config=_THINKING_OFF,
             ),
