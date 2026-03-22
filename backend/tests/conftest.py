@@ -43,7 +43,7 @@ def block_firebase_init(monkeypatch):
 @pytest.fixture(autouse=True)
 def block_gemini_configure(monkeypatch):
     """Prevent real Gemini API configuration on module load."""
-    monkeypatch.setattr("google.generativeai.configure", MagicMock())
+    monkeypatch.setattr("google.genai.Client", MagicMock(return_value=MagicMock()))
 
 
 # ── Async Firestore helper ────────────────────────────────────────────────────

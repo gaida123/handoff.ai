@@ -88,11 +88,11 @@ class Settings(BaseSettings):
 
     # ── Google Gemini ─────────────────────────────────────────────────────────
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-1.5-flash"
+    gemini_model: str = "gemini-2.5-flash"
     gemini_vision_timeout_seconds: int = 10
 
     # Embeddings — used for semantic SOP search (RAG)
-    embedding_model: str = "models/text-embedding-004"
+    embedding_model: str = "gemini-embedding-001"
     embedding_cache_ttl: int = 3600  # seconds before in-memory cache entry expires
 
     # ── Firebase ──────────────────────────────────────────────────────────────

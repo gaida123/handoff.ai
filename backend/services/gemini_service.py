@@ -1,16 +1,14 @@
 """
 Gemini service — wraps all Google Gemini API calls made by HandOff.AI.
 
-Key design decisions vs the naive approach:
-  1. Structured output  — response_mime_type="application/json" eliminates
-     markdown-fence regex stripping.  Gemini is contractually bound to emit
-     valid JSON, so _parse_* helpers do clean Pydantic validation only.
-  2. Retry with backoff — transient 429 / 503 errors auto-recover via tenacity
-     without leaking exceptions to the caller.
-  3. Coordinate clamping — raw model output is clamped to [0, 1] so a
-     hallucinated value of 1.03 never moves the Ghost Cursor off-screen.
-  4. Intent classification — classify_voice_intent() replaces the brittle
-     keyword list in knowledge_agent.py with a single fast LLM call.
+Migrated to the google-genai SDK (google.genai) which replaces the
+deprecated google.generativeai package.
+
+Key design decisions:
+  1. Structured JSON output via response_mime_type="application/json"
+  2. Retry with exponential backoff via tenacity
+  3. Coordinate clamping to [0, 1] — hallucinates off-screen values are safe
+  4. Intent classification replaces the brittle keyword list
 """
 
 import asyncio
@@ -19,9 +17,8 @@ import logging
 import re
 from typing import Optional
 
-import google.generativeai as genai
-import google.api_core.exceptions as gapi_exc
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
+from google import genai
+from google.genai import types as genai_types
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -34,23 +31,12 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=settings.gemini_api_key)
+# Single shared client — thread-safe, connection-pooled
+_client = genai.Client(api_key=settings.gemini_api_key)
 
-_model = genai.GenerativeModel(settings.gemini_model)
-
-# Safety config shared by all calls — vision analysis of SaaS UIs is benign
-_SAFETY_OFF = {
-    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-}
-
-# Retry decorator — retries on rate-limit (429) and transient server errors
+# Retry on transient errors
 _RETRYABLE = retry_if_exception_type((
-    gapi_exc.ResourceExhausted,
-    gapi_exc.ServiceUnavailable,
-    gapi_exc.DeadlineExceeded,
+    Exception,  # google.genai wraps rate-limit/server errors as ClientError/ServerError
 ))
 
 _retry = retry(
@@ -62,7 +48,7 @@ _retry = retry(
 )
 
 
-# ── Coordinate extraction ─────────────────────────────────────────────────────
+# ── Coordinate extraction ──────────────────────────────────────────────────────
 
 _COORDINATE_PROMPT = """\
 You are a UI element locator for a web application co-pilot.
@@ -75,7 +61,7 @@ CSS selector hint (may be stale — treat as a clue only): "{selector_hint}"
 Instructions:
 1. Find the element described above in the screenshot.
 2. Return its centre as fractional coordinates (0.0 = left/top, 1.0 = right/bottom).
-3. Return a fractional bounding box {x, y, w, h}.
+3. Return a fractional bounding box {{x, y, w, h}}.
 4. Report any error modal, blocking dialog, or unexpected overlay if visible.
 5. Set confidence between 0.0 and 1.0.
 
@@ -97,18 +83,13 @@ async def locate_element(
     target_description: str,
     selector_hint: Optional[str] = None,
 ) -> dict:
-    """
-    Send a base64-encoded PNG screenshot to Gemini Vision.
-    Returns a validated dict matching VisionResponse payload fields.
-    """
+    """Send a base64-encoded PNG to Gemini Vision. Returns validated coords dict."""
     prompt = _COORDINATE_PROMPT.format(
         target_description=target_description,
         selector_hint=selector_hint or "none provided",
     )
-    image_data = {"mime_type": "image/png", "data": screenshot_base64}
-
     try:
-        raw = await _call_vision_with_retry(prompt, image_data)
+        raw = await _call_vision_with_retry(prompt, screenshot_base64)
         return _parse_vision_response(raw)
     except Exception as exc:
         logger.error("Gemini Vision failed after retries: %s", exc)
@@ -116,31 +97,33 @@ async def locate_element(
 
 
 @_retry
-async def _call_vision_with_retry(prompt: str, image_data: dict) -> str:
-    response = await _model.generate_content_async(
-        [prompt, image_data],
-        generation_config=genai.GenerationConfig(
-            temperature=0.05,
-            max_output_tokens=512,
-            response_mime_type="application/json",
+async def _call_vision_with_retry(prompt: str, screenshot_base64: str) -> str:
+    response = await asyncio.get_event_loop().run_in_executor(
+        None,
+        lambda: _client.models.generate_content(
+            model=settings.gemini_model,
+            contents=[
+                genai_types.Part.from_text(text=prompt),
+                genai_types.Part.from_bytes(
+                    data=__import__("base64").b64decode(screenshot_base64),
+                    mime_type="image/png",
+                ),
+            ],
+            config=genai_types.GenerateContentConfig(
+                temperature=0.05,
+                max_output_tokens=512,
+                response_mime_type="application/json",
+            ),
         ),
-        safety_settings=_SAFETY_OFF,
-        request_options={"timeout": settings.gemini_vision_timeout_seconds},
     )
     return response.text.strip()
 
 
 def _parse_vision_response(raw: str) -> dict:
-    """
-    Parse and validate Gemini's JSON vision response.
-    With response_mime_type="application/json" the output is guaranteed JSON,
-    but we still clamp coordinates to [0, 1] in case of hallucinated values.
-    """
+    """Parse and validate Gemini's JSON vision response. Clamps coords to [0,1]."""
     try:
         data = json.loads(raw)
     except json.JSONDecodeError as exc:
-        # Fallback: strip accidental markdown fences (should never happen with
-        # response_mime_type="application/json", but belt-and-suspenders)
         cleaned = re.sub(r"```(?:json)?\s*", "", raw).strip().rstrip("`")
         try:
             data = json.loads(cleaned)
@@ -165,14 +148,9 @@ def _parse_vision_response(raw: str) -> dict:
 
 def _vision_fallback(reason: str) -> dict:
     return {
-        "found": False,
-        "target_x": 0.5,
-        "target_y": 0.5,
-        "bounding_box": None,
-        "detected_error_modal": False,
-        "error_modal_text": None,
-        "confidence": 0.0,
-        "_error": reason,
+        "found": False, "target_x": 0.5, "target_y": 0.5,
+        "bounding_box": None, "detected_error_modal": False,
+        "error_modal_text": None, "confidence": 0.0, "_error": reason,
     }
 
 
@@ -181,20 +159,10 @@ def _clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
 
 
 # ── Voice intent classification ───────────────────────────────────────────────
-#
-# Replaces the brittle keyword-list in knowledge_agent.py with a single fast
-# LLM call.  The result drives step navigation and autofill decisions.
 
 _VALID_INTENTS = frozenset({
-    "navigate_next",
-    "navigate_back",
-    "navigate_repeat",
-    "navigate_skip",
-    "confirm",
-    "fill",
-    "question",
-    "sop_switch",
-    "unknown",
+    "navigate_next", "navigate_back", "navigate_repeat", "navigate_skip",
+    "confirm", "fill", "question", "sop_switch", "unknown",
 })
 
 _INTENT_PROMPT = """\
@@ -219,22 +187,15 @@ Respond with a JSON object only — no explanation:
 """
 
 
-async def classify_voice_intent(
-    command: str,
-    current_step_index: int = 0,
-) -> str:
-    """
-    Classify a raw voice command into one of the intent categories.
-    Falls back to keyword matching if the LLM call fails.
-    """
+async def classify_voice_intent(command: str, current_step_index: int = 0) -> str:
+    """Classify a raw voice command into one of the intent categories."""
     if not command or not command.strip():
         return "navigate_next"
 
     prompt = _INTENT_PROMPT.format(
         step_index=current_step_index,
-        command=command.replace('"', "'"),  # guard against prompt injection
+        command=command.replace('"', "'"),
     )
-
     try:
         raw = await _call_intent_with_retry(prompt)
         data = json.loads(raw)
@@ -247,19 +208,31 @@ async def classify_voice_intent(
 
 @_retry
 async def _call_intent_with_retry(prompt: str) -> str:
-    response = await _model.generate_content_async(
-        prompt,
-        generation_config=genai.GenerationConfig(
-            temperature=0.0,
-            max_output_tokens=32,
-            response_mime_type="application/json",
+    response = await asyncio.get_event_loop().run_in_executor(
+        None,
+        lambda: _client.models.generate_content(
+            model=settings.gemini_model,
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(
+                temperature=0.0,
+                max_output_tokens=64,
+                # No response_mime_type for short classification — avoids empty-body edge case
+            ),
         ),
     )
-    return response.text.strip()
+    text = response.text.strip() if response.text else ""
+    # Extract JSON from the response (model may wrap it in text)
+    match = re.search(r'\{[^}]+\}', text)
+    if match:
+        return match.group(0)
+    # If it just returned the intent word directly, wrap it
+    for intent in _VALID_INTENTS:
+        if intent in text.lower():
+            return f'{{"intent": "{intent}"}}'
+    return '{"intent": "unknown"}'
 
 
 def _keyword_intent_fallback(command: str) -> str:
-    """Hard-coded fallback used only when the LLM call itself fails."""
     cmd = command.lower()
     if any(k in cmd for k in ("next", "continue", "proceed", "go ahead", "done")):
         return "navigate_next"
@@ -279,13 +252,15 @@ def _keyword_intent_fallback(command: str) -> str:
 # ── SOP generation from Record Mode events ───────────────────────────────────
 
 _SOP_GENERATION_PROMPT = """\
-You are an expert technical writer. Convert the following list of raw DOM interaction events (captured during an admin walkthrough of a SaaS application) into a clear, friendly, numbered SOP that a new user can follow.
+You are an expert technical writer. Convert the following list of raw DOM interaction events \
+(captured during an admin walkthrough of a SaaS application) into a clear, friendly, numbered \
+SOP that a new user can follow.
 
 DOM Events (JSON array):
 {events_json}
 
 Rules:
-- Write each instruction in plain English, second person ("Click the…", "Type your…", "Select…").
+- Write each instruction in plain English, second person ("Click the...", "Type your...", "Select...").
 - Keep each instruction under 20 words so it sounds natural when read aloud via text-to-speech.
 - Mark any step that involves submitting, deleting, or publishing as is_destructive: true.
 - Mark form-field steps with requires_autofill: true only if a non-sensitive value was captured.
@@ -309,21 +284,14 @@ Return a JSON array only — no markdown, no explanation:
 
 
 async def generate_sop_steps(events: list[dict]) -> list[dict]:
-    """
-    Use Gemini to convert raw Record Mode DOM events into structured SOP steps.
-    Called by the Admin API when a recording session is finalised.
-    """
+    """Convert raw Record Mode DOM events into structured SOP steps via Gemini."""
     prompt = _SOP_GENERATION_PROMPT.format(
         events_json=json.dumps(events, indent=2, default=str)
     )
-
     try:
         raw = await _call_sop_gen_with_retry(prompt)
-        # With response_mime_type="application/json", raw is guaranteed valid JSON
-        # But Gemini may return an object with a key rather than a bare array
         parsed = json.loads(raw)
         if isinstance(parsed, dict):
-            # Extract the array from whichever key contains it
             for v in parsed.values():
                 if isinstance(v, list):
                     parsed = v
@@ -336,12 +304,16 @@ async def generate_sop_steps(events: list[dict]) -> list[dict]:
 
 @_retry
 async def _call_sop_gen_with_retry(prompt: str) -> str:
-    response = await _model.generate_content_async(
-        prompt,
-        generation_config=genai.GenerationConfig(
-            temperature=0.2,
-            max_output_tokens=2048,
-            response_mime_type="application/json",
+    response = await asyncio.get_event_loop().run_in_executor(
+        None,
+        lambda: _client.models.generate_content(
+            model=settings.gemini_model,
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(
+                temperature=0.2,
+                max_output_tokens=2048,
+                response_mime_type="application/json",
+            ),
         ),
     )
     return response.text.strip()
