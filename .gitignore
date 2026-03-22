@@ -28,6 +28,8 @@ build/
 node_modules/
 frontend/dist/
 frontend/build/
+frontend/.env
+frontend/.env.local
 .npm
 *.tsbuildinfo
 

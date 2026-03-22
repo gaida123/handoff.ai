@@ -94,7 +94,7 @@ function createWindow() {
 
   if (isDev) {
     win.loadURL('http://localhost:5173/overlay')
-    // win.webContents.openDevTools({ mode: 'detach' })
+    if (isDev) win.webContents.openDevTools({ mode: 'detach' })
   } else {
     win.loadFile(path.join(__dirname, '../frontend/dist/index.html'), {
       hash: '/overlay',

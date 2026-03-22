@@ -231,6 +231,54 @@ async def finish_session(session_id: str):
     return {"finished": True}
 
 
+@router.post("/tts")
+async def text_to_speech(body: dict):
+    """
+    Convert text to speech using macOS neural voices (say command).
+    Returns audio/aiff — plays natively in Chrome/Electron.
+    """
+    import os
+    import subprocess
+    import tempfile
+
+    from fastapi.responses import Response
+
+    text = str(body.get("text", "")).strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="text is required")
+
+    # Pick the best available voice
+    preferred = ["Ava (Enhanced)", "Samantha (Enhanced)", "Ava", "Samantha", "Karen", "Daniel"]
+    voice = "Samantha"
+    try:
+        result = subprocess.run(["say", "-v", "?"], capture_output=True, text=True, timeout=5)
+        available = result.stdout
+        for v in preferred:
+            if v.lower() in available.lower():
+                voice = v
+                break
+    except Exception:
+        pass
+
+    with tempfile.NamedTemporaryFile(suffix=".aiff", delete=False) as f:
+        tmp_path = f.name
+    try:
+        subprocess.run(
+            ["say", "-v", voice, "-r", "175", text, "-o", tmp_path],
+            check=True, timeout=15,
+        )
+        with open(tmp_path, "rb") as f:
+            audio = f.read()
+        return Response(content=audio, media_type="audio/aiff")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"TTS failed: {exc}")
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
+
 @router.get("/feed")
 async def get_agent_feed(limit: int = 30):
     """
