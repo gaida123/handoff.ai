@@ -211,22 +211,23 @@ export default function OverlayPage() {
   const widgetRef = useRef<HTMLDivElement>(null)
   const isExpanded = demoMode || backendStarted || sopPickerOpen
 
+  // ResizeObserver fires automatically whenever the widget grows/shrinks,
+  // including during Framer Motion spring animations
   useEffect(() => {
-    if (!electronAPI?.setExpanded) return
-    if (!isExpanded) {
-      electronAPI.setExpanded(52)   // collapsed bar height
-      return
-    }
-    // Measure after the animation frame so the DOM has settled
-    const measure = () => {
-      const h = widgetRef.current?.scrollHeight
-      if (h) electronAPI.setExpanded(Math.ceil(h) + 2)
-    }
-    // Run twice: immediately + after spring animation completes
-    requestAnimationFrame(measure)
-    const t = setTimeout(measure, 350)
-    return () => clearTimeout(t)
-  }, [isExpanded, demoStep, sopPickerOpen, pickerSopId, verifyHint, idleHint, isVerifying, isAnalysing, isComplete])
+    if (!electronAPI?.setExpanded || !widgetRef.current) return
+    const el = widgetRef.current
+    const send = (h: number) => electronAPI.setExpanded(Math.ceil(h) + 2)
+
+    // Send initial height
+    send(el.getBoundingClientRect().height || 52)
+
+    const ro = new ResizeObserver(entries => {
+      const h = entries[0]?.contentRect.height
+      if (h != null && h > 0) send(h)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, []) // runs once; ResizeObserver handles all subsequent changes
 
   // ── Voice ────────────────────────────────────────────────────────────────
   const { state: voiceState, startListening, stopListening, speak } = useVoice({
